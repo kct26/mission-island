@@ -1,0 +1,981 @@
+<title>Mission Island Build Map</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a single reading column (max 1080px) of numbered build chapters; diagrams scroll sideways on phones.
+   Colour encodes where code runs: blue = browser, violet = Vercel, amber = services, green = offline. */
+:root {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --ink: #142033;
+  --muted: #56627a;
+  --line: #d6dce6;
+  --accent: #e2572b;          /* launch orange */
+  --browser: #2f6fd6;
+  --browser-tint: #e8f0fc;
+  --server: #7a4fd1;
+  --server-tint: #f1ebfc;
+  --svc: #b7791f;
+  --svc-tint: #fbf3e4;
+  --offline: #2f8f5b;
+  --offline-tint: #e7f5ed;
+  --code-bg: #eef1f6;
+  --font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1420; --surface: #151d2c; --ink: #e6ebf4; --muted: #9aa6bd; --line: #2a3548;
+    --accent: #ff7a4d; --browser: #6ea2ff; --browser-tint: #16243d; --server: #a985ff; --server-tint: #221a38;
+    --svc: #e0a64a; --svc-tint: #2a2214; --offline: #5cc78c; --offline-tint: #13281d; --code-bg: #1b2436;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1420; --surface: #151d2c; --ink: #e6ebf4; --muted: #9aa6bd; --line: #2a3548;
+  --accent: #ff7a4d; --browser: #6ea2ff; --browser-tint: #16243d; --server: #a985ff; --server-tint: #221a38;
+  --svc: #e0a64a; --svc-tint: #2a2214; --offline: #5cc78c; --offline-tint: #13281d; --code-bg: #1b2436;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.6 var(--font-body); }
+.page { max-width: 1080px; margin: 0 auto; padding-block: 40px 80px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 56px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(32px, 5vw, 48px); letter-spacing: -0.02em; }
+h2 { font-size: clamp(22px, 3vw, 28px); letter-spacing: -0.01em; }
+h3 { font-size: 17px; }
+p { margin: 0; max-width: 68ch; }
+.eyebrow { font: 600 12px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.lead { font-size: 17px; color: var(--muted); }
+section { display: flex; flex-direction: column; gap: 18px; }
+.sec-head { display: flex; flex-direction: column; gap: 8px; }
+.sec-head .num { font: 500 13px var(--font-mono); color: var(--muted); }
+code, pre, .mono { font-family: var(--font-mono); }
+code { font-size: .88em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+
+/* header */
+header { display: flex; flex-direction: column; gap: 14px; }
+.legend { display: flex; flex-wrap: wrap; gap: 10px 18px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; border: 2px solid; }
+
+/* journey strip */
+.journey { display: grid; grid-template-columns: repeat(8, minmax(118px, 1fr)); gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+.step { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 4px; min-width: 0; position: relative; }
+.step b { font-family: var(--font-display); font-size: 15px; }
+.step .k { font: 500 11px var(--font-mono); color: var(--muted); }
+.step p { font-size: 12.5px; color: var(--muted); line-height: 1.4; }
+.step.ai { border-color: var(--server); box-shadow: inset 0 3px 0 var(--server); }
+.step.new { border-color: var(--accent); box-shadow: inset 0 3px 0 var(--accent); }
+.tags { display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.tag { display: inline-flex; align-items: center; gap: 5px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; }
+
+/* diagrams */
+.diagram { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; overflow-x: auto; }
+.diagram svg { display: block; min-width: 780px; width: 100%; height: auto; }
+.diagram pre.mermaid { margin: 0; min-width: 640px; background: transparent; }
+.caption { font-size: 13px; color: var(--muted); }
+
+/* rule callout */
+.rule { display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: center; border: 2px solid var(--accent); border-radius: 14px; padding: 20px 22px; background: var(--surface); }
+.rule .big { font: 700 15px var(--font-mono); color: var(--accent); letter-spacing: .06em; text-transform: uppercase; writing-mode: horizontal-tb; }
+.rule h3 { font-size: 20px; margin-bottom: 6px; }
+@media (max-width: 640px) { .rule { grid-template-columns: 1fr; } }
+
+/* cards */
+.grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.card dl { margin: 0; display: grid; grid-template-columns: 74px 1fr; gap: 4px 10px; font-size: 13px; }
+.card dt { color: var(--muted); font: 500 11.5px var(--font-mono); text-transform: uppercase; letter-spacing: .05em; padding-top: 2px; }
+.card dd { margin: 0; min-width: 0; }
+.card .route { font: 500 12px var(--font-mono); color: var(--server); }
+.card.ws { border-top: 4px solid var(--c, var(--line)); }
+.card ul { margin: 0; padding-left: 18px; font-size: 13.5px; display: flex; flex-direction: column; gap: 4px; }
+.card .folders { font: 12px var(--font-mono); color: var(--muted); }
+
+/* tables */
+.tbl { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; min-width: 620px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 600 12px var(--font-mono); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); background: var(--code-bg); }
+tr:last-child td { border-bottom: 0; }
+td code { white-space: nowrap; }
+
+/* code blocks */
+pre.code { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 12px; padding: 16px; overflow-x: auto; font-size: 12.5px; line-height: 1.55; color: var(--ink); }
+.c { color: var(--muted); }
+.k1 { color: var(--server); }
+.k2 { color: var(--browser); }
+.cols { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.cols > * { min-width: 0; }
+
+/* build order */
+.order { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0; counter-reset: s; }
+.order li { display: grid; grid-template-columns: 44px 1fr; gap: 14px; position: relative; padding-bottom: 18px; }
+.order li::before { counter-increment: s; content: counter(s); width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font: 600 15px var(--font-display); background: var(--surface); border: 2px solid var(--line); color: var(--ink); z-index: 1; }
+.order li::after { content: ""; position: absolute; left: 17px; top: 36px; bottom: 0; width: 2px; background: var(--line); }
+.order li:last-child::after { display: none; }
+.order li.gate::before { border-color: var(--accent); color: var(--accent); }
+.order .body { display: flex; flex-direction: column; gap: 4px; padding-top: 6px; min-width: 0; }
+.order .body b { font-family: var(--font-display); font-size: 16px; }
+.order .done { font-size: 13px; color: var(--muted); }
+.order .who { font: 500 11.5px var(--font-mono); color: var(--muted); }
+.pill { display: inline-block; font: 600 11px var(--font-mono); padding: 2px 8px; border-radius: 999px; background: var(--code-bg); color: var(--muted); }
+.pill.go { background: var(--accent); color: #fff; }
+
+/* glossary */
+.gloss { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px 24px; margin: 0; }
+.gloss div { display: flex; flex-direction: column; gap: 2px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.gloss dt { font: 600 14px var(--font-display); }
+.gloss dd { margin: 0; font-size: 13.5px; color: var(--muted); }
+footer { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 18px; }
+
+/* architecture stack */
+.stack { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 24px 16px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.node { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 14px 18px; max-width: 560px; width: 100%; border-radius: 12px; }
+.node b { font-family: var(--font-display); font-size: 18px; }
+.node p { font-size: 14px; color: var(--muted); }
+.node .tech { font-size: 12px; color: var(--muted); }
+.node.core { border: 2px solid var(--accent); background: var(--bg); max-width: 760px; }
+.ico { width: 26px; height: 26px; fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.arr { color: var(--muted); font-size: 18px; line-height: 1; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 900px; }
+.pair .node { max-width: none; }
+@media (max-width: 640px) { .pair { grid-template-columns: 1fr; } }
+/* screens + missions */
+.shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+.shot { margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.frame { border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: #03050c; line-height: 0; }
+.frame svg { width: 100%; height: auto; display: block; }
+.shot figcaption { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--muted); }
+.shot figcaption b { font-family: var(--font-display); font-size: 15px; color: var(--ink); }
+.missions { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.mission { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+.mission .frame { border: 0; border-radius: 0; }
+.mbody { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px; }
+.mbody .lvl { font: 500 11.5px var(--font-mono); color: var(--muted); }
+.mbody dl { margin: 0; display: grid; grid-template-columns: 82px 1fr; gap: 4px 10px; font-size: 13px; }
+.mbody dt { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding-top: 2px; }
+.mbody dd { margin: 0; }
+.mbody dd.crit { color: var(--accent); font-weight: 600; }
+/* status pills */
+.st { display: inline-block; font: 600 11px var(--font-mono); padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+.st.ok { background: var(--offline-tint); color: var(--offline); }
+.st.plan { background: var(--browser-tint); color: var(--browser); }
+.st.gap { background: var(--svc-tint); color: var(--svc); }
+
+.mut { color: var(--muted); font-size: 12px; }
+.res6 { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.rt { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.rt b { font-family: var(--font-display); font-size: 17px; }
+.rt .u { font: 500 11.5px var(--font-mono); color: var(--accent); }
+.rt p { font-size: 13px; color: var(--muted); }
+.formula { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; background: var(--surface); border: 2px solid var(--accent); border-radius: 14px; padding: 16px; }
+.formula .f { background: var(--code-bg); border-radius: 8px; padding: 8px 12px; font-weight: 600; font-size: 14px; display: flex; flex-direction: column; }
+.formula .f small { font: 500 11px var(--font-mono); color: var(--muted); }
+.formula i { font-style: normal; font-size: 20px; color: var(--accent); font-weight: 700; }
+.loss { display: grid; grid-template-columns: minmax(0, 1fr) 90px 28px; align-items: center; gap: 10px; font-size: 13px; }
+.loss i { display: block; height: 10px; border-radius: 5px; background: var(--browser); }
+.loss b { font-variant-numeric: tabular-nums; text-align: right; }
+.scorebar { display: flex; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); min-height: 64px; }
+.scorebar div { display: flex; flex-direction: column; justify-content: center; padding: 8px 10px; min-width: 0; color: #fff; }
+.scorebar b { font: 600 14px var(--font-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.scorebar span { font-size: 11.5px; opacity: .9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb1 { background: var(--browser); } .sb1b { background: color-mix(in srgb, var(--browser) 60%, var(--surface)); }
+.sb2 { background: var(--offline); } .sb3 { background: var(--svc); } .sb4 { background: var(--server); }
+.grades { display: flex; flex-wrap: wrap; gap: 8px; }
+.grades span { display: flex; flex-direction: column; align-items: center; min-width: 64px; padding: 8px; border-radius: 10px; background: var(--code-bg); font-size: 12px; color: var(--muted); }
+.grades b { font: 700 22px var(--font-display); color: var(--ink); }
+@media (max-width: 640px) { .scorebar { flex-direction: column; } .scorebar div { flex: none !important; } .loss { grid-template-columns: minmax(0,1fr) 60px 26px; } }
+.cols .tbl table { min-width: 0; }
+.st.simp { background: #fff1c2; color: #8a6400; }
+.st.no { background: #e9ecef; color: #5b6472; }
+.status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.status-col { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.status-col h3 { display: flex; align-items: center; gap: 8px; }
+.status-col ul { margin: 0; padding-left: 18px; font-size: 13.5px; display: flex; flex-direction: column; gap: 5px; }
+.status-col.ok { border-top: 4px solid var(--offline); } .status-col.simp { border-top: 4px solid var(--svc); } .status-col.no { border-top: 4px solid var(--line); }
+.links { display: flex; flex-wrap: wrap; gap: 10px; }
+.links a { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); text-decoration: none; font-weight: 600; font-size: 14px; }
+.links a.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="page">
+
+<header>
+  <span class="eyebrow">NASA Space Apps 2026 · Space Mission Design Game</span>
+  <h1>Mission Island: build map</h1>
+  <p class="lead">Status as of 14 November 2026: playable at mission-island.vercel.app. Everything the team needs to start building: what the game does, its levels and rules, the 3D plan, where each piece of code runs, how the AI works, what data we store, who builds what, and in which order. Colours tell you where code runs.</p>
+  <div class="legend" aria-label="Colour key">
+    <span><i class="sw" style="border-color:var(--browser);background:var(--browser-tint)"></i>Runs in the player's browser</span>
+    <span><i class="sw" style="border-color:var(--server);background:var(--server-tint)"></i>Runs on Vercel (server)</span>
+    <span><i class="sw" style="border-color:var(--svc);background:var(--svc-tint)"></i>Outside services and storage</span>
+    <span><i class="sw" style="border-color:var(--offline);background:var(--offline-tint)"></i>Runs offline, once</span>
+  </div>
+</header>
+
+<!-- status -->
+<section id="status">
+  <div class="sec-head"><span class="num">00 · Status</span><h2>What is built today</h2>
+  <p>Status as of 14 November 2026. The game is complete and playable; part of the heavier architecture in this map is still planned. Every section below is marked <span class="st ok">Built</span>, <span class="st simp">Simpler</span> (built in a lighter way than planned) or <span class="st no">Not yet</span>.</p></div>
+  <div class="links"><a class="primary" href="https://mission-island.vercel.app" target="_blank" rel="noopener">▶ Play the live game</a><a href="https://github.com/kct26/mission-island" target="_blank" rel="noopener">Code on GitHub</a></div>
+  <div class="status-grid">
+    <div class="status-col ok"><h3><span class="st ok">Built</span> Playable now</h3><ul>
+      <li>All 5 missions, levels and rules</li><li>Island with 5 stations and game-style menus with illustrations</li>
+      <li>Design review with Fix buttons</li><li>Launch, day-by-day flight, 7 events with recommendations</li>
+      <li>Shadowline: planning, rover drive, failure, VIPER comparison</li><li>Science index, scoring, results page</li>
+      <li>Ask CAPCOM (simulator-tested answers; AI optional)</li><li>Hot-seat team roles and sign-off</li>
+      <li>Real orbital physics, NASA mission archive, CML ladder</li><li>Hosted on Vercel from GitHub</li></ul></div>
+    <div class="status-col simp"><h3><span class="st simp">Simpler</span> Built a lighter way</h3><ul>
+      <li>3D in plain Three.js instead of React Three Fiber</li><li>Simple collision instead of Rapier physics</li>
+      <li>One game controller file instead of a Zustand store</li><li>Engine in plain JavaScript on the main thread (not TypeScript, no Web Worker)</li>
+      <li>One app folder instead of a monorepo</li><li>In-memory rate limit instead of Redis</li>
+      <li>Leaderboard saved in each browser instead of a database</li><li>Procedural crater instead of NASA Moon Trek terrain</li></ul></div>
+    <div class="status-col no"><h3><span class="st no">Not yet</span> Still planned</h3><ul>
+      <li>AI Design Review Board, Mission Director, Debrief</li><li>Database: saved designs, verified leaderboard</li>
+      <li>Real Moon Trek terrain and the Python pipeline</li><li>Automated tests and AI evals</li>
+      <li>Development time as a resource</li><li>Simple parts on easy difficulty</li><li>Class competition and teacher mode</li>
+      <li>Touch controls, student playtest, demo video</li></ul></div>
+  </div>
+</section>
+
+<!-- 0 -->
+<section>
+  <div class="sec-head"><span class="num">01 · Why</span><h2>The problem and the goal</h2></div>
+  <div class="cols">
+    <div class="card"><h3>Problem</h3><p>Designing a space mission is a chain of trade-offs: a better instrument adds mass, power, data and cost. Students rarely get to try a whole mission, so these trade-offs stay abstract.</p></div>
+    <div class="card"><h3>Goal</h3><p>Players design a full mission on a 3D island, launch it, fly it, and on the Moon drive a rover into a dark crater. An AI mission controller (CAPCOM) coaches them and explains every outcome, using only the simulation's numbers.</p></div>
+  </div>
+</section>
+
+<!-- 1 -->
+<section>
+  <div class="sec-head"><span class="num">02 · Player journey</span><h2>What a player does, start to finish</h2>
+  <p>About 10 minutes per run. Purple steps use the AI; the orange step is the new Shadowline phase.</p></div>
+  <div class="journey" role="list">
+    <div class="step" role="listitem"><span class="k">1 · 30 s</span><b>Menu</b><p>Pick a mission and difficulty. No login.</p></div>
+    <div class="step" role="listitem"><span class="k">2 · 5 min</span><b>Island design</b><p>Walk to 5 buildings, one kind of decision each.</p></div>
+    <div class="step ai" role="listitem"><span class="k">any time</span><b>Ask CAPCOM</b> <span class="st ok">Done</span><p>Chat: "why is this red?", "what if I swap the antenna?"</p></div>
+    <div class="step ai" role="listitem"><span class="k">3 · 1 min</span><b>Review Board</b><p>AI reviews the design; 3 tested suggestions.</p></div>
+    <div class="step" role="listitem"><span class="k">4 · 15 s</span><b>Launch</b><p>Rocket cinematic, sky goes black.</p></div>
+    <div class="step ai" role="listitem"><span class="k">5 · 2 min</span><b>Flight</b><p>Days tick by; AI picks events and talks on the radio.</p></div>
+    <div class="step new" role="listitem"><span class="k">6 · 3 min</span><b>Shadowline</b> <span class="st ok">Done</span><p>Moon only: rover into a dark crater and back.</p></div>
+    <div class="step ai" role="listitem"><span class="k">7 · 1 min</span><b>Debrief</b><p>Grade, why it happened, compare with a real NASA mission.</p></div>
+  </div>
+  <div class="tags"><span class="tag"><i class="dot" style="background:var(--server)"></i>uses AI</span><span class="tag"><i class="dot" style="background:var(--accent)"></i>new for this build</span></div>
+</section>
+
+<!-- golden rule -->
+<div class="rule" role="note">
+  <span class="big">Golden rule</span>
+  <div><h3>The simulation decides. The AI explains.</h3>
+  <p>Every number, score and outcome comes from <code>@mi/sim</code>, our deterministic engine. Claude only chooses words, asks the engine questions through tools, and picks events from a safe list. If the AI is slow or down, scripted text takes over and the game still works.</p></div>
+</div>
+
+<!-- screens -->
+<section>
+  <div class="sec-head"><span class="num">03 · Screens to build</span><h2>What each part of the game looks like</h2>
+  <p>Mock-ups of the target design, in play order. They show layout and content, not final art; use them as the brief for the 3D and UI workstreams.</p></div>
+  <div class="shots"><figure class="shot"><div class="frame"><svg viewBox="0 0 640 360" role="img" aria-label="Menu screen mock-up" font-family="Inter, system-ui, sans-serif"><defs><linearGradient id="mg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c2b5a"/><stop offset="1" stop-color="#060a16"/></linearGradient></defs><rect width="640" height="360" fill="url(#mg)"/><circle cx="86" cy="305" r="0.6" fill="#fff" opacity="0.53"/><circle cx="317" cy="162" r="1.1" fill="#fff" opacity="0.59"/><circle cx="134" cy="176" r="0.8" fill="#fff" opacity="0.62"/><circle cx="488" cy="1" r="0.8" fill="#fff" opacity="0.53"/><circle cx="513" cy="213" r="0.6" fill="#fff" opacity="0.85"/><circle cx="20" cy="9" r="1.1" fill="#fff" opacity="0.40"/><circle cx="564" cy="247" r="0.8" fill="#fff" opacity="0.76"/><circle cx="338" cy="275" r="0.8" fill="#fff" opacity="0.68"/><circle cx="221" cy="244" r="0.8" fill="#fff" opacity="0.88"/><circle cx="593" cy="150" r="1.1" fill="#fff" opacity="0.86"/><circle cx="64" cy="227" r="1.1" fill="#fff" opacity="0.83"/><circle cx="77" cy="120" r="1.1" fill="#fff" opacity="0.89"/><circle cx="321" cy="348" r="1.1" fill="#fff" opacity="0.82"/><circle cx="429" cy="109" r="1.1" fill="#fff" opacity="0.89"/><circle cx="320" cy="339" r="0.8" fill="#fff" opacity="0.69"/><circle cx="22" cy="87" r="0.8" fill="#fff" opacity="0.61"/><circle cx="111" cy="198" r="1.1" fill="#fff" opacity="0.79"/><circle cx="472" cy="31" r="1.1" fill="#fff" opacity="0.65"/><circle cx="498" cy="188" r="0.8" fill="#fff" opacity="0.59"/><circle cx="469" cy="169" r="0.8" fill="#fff" opacity="0.75"/><circle cx="629" cy="214" r="0.8" fill="#fff" opacity="0.72"/><circle cx="108" cy="82" r="0.6" fill="#fff" opacity="0.79"/><circle cx="345" cy="310" r="0.6" fill="#fff" opacity="0.60"/><circle cx="220" cy="305" r="0.8" fill="#fff" opacity="0.63"/><circle cx="172" cy="197" r="1.1" fill="#fff" opacity="0.40"/><circle cx="502" cy="295" r="1.1" fill="#fff" opacity="0.66"/><circle cx="83" cy="280" r="0.6" fill="#fff" opacity="0.61"/><circle cx="36" cy="313" r="1.1" fill="#fff" opacity="0.68"/><circle cx="602" cy="149" r="0.8" fill="#fff" opacity="0.61"/><circle cx="1" cy="194" r="1.1" fill="#fff" opacity="0.57"/><circle cx="384" cy="290" r="1.1" fill="#fff" opacity="0.49"/><circle cx="374" cy="310" r="1.1" fill="#fff" opacity="0.80"/><circle cx="523" cy="92" r="1.1" fill="#fff" opacity="0.44"/><circle cx="556" cy="163" r="0.8" fill="#fff" opacity="0.52"/><circle cx="70" cy="225" r="0.8" fill="#fff" opacity="0.55"/><circle cx="107" cy="92" r="0.6" fill="#fff" opacity="0.73"/><circle cx="415" cy="106" r="1.1" fill="#fff" opacity="0.56"/><circle cx="303" cy="9" r="0.8" fill="#fff" opacity="0.57"/><circle cx="510" cy="93" r="0.8" fill="#fff" opacity="0.85"/><circle cx="326" cy="75" r="1.1" fill="#fff" opacity="0.62"/><circle cx="624" cy="81" r="0.8" fill="#fff" opacity="0.47"/><circle cx="460" cy="58" r="1.1" fill="#fff" opacity="0.65"/><circle cx="273" cy="300" r="1.1" fill="#fff" opacity="0.80"/><circle cx="331" cy="80" r="1.1" fill="#fff" opacity="0.42"/><circle cx="432" cy="289" r="1.1" fill="#fff" opacity="0.72"/><circle cx="38" cy="107" r="0.6" fill="#fff" opacity="0.84"/><circle cx="196" cy="309" r="0.8" fill="#fff" opacity="0.86"/><circle cx="191" cy="57" r="1.1" fill="#fff" opacity="0.53"/><circle cx="5" cy="316" r="0.6" fill="#fff" opacity="0.70"/><circle cx="139" cy="324" r="0.8" fill="#fff" opacity="0.49"/><circle cx="555" cy="351" r="1.1" fill="#fff" opacity="0.71"/><circle cx="24" cy="72" r="0.6" fill="#fff" opacity="0.50"/><circle cx="431" cy="156" r="0.6" fill="#fff" opacity="0.65"/><circle cx="600" cy="140" r="1.1" fill="#fff" opacity="0.65"/><circle cx="208" cy="314" r="0.8" fill="#fff" opacity="0.41"/><circle cx="129" cy="118" r="1.1" fill="#fff" opacity="0.79"/><circle cx="217" cy="77" r="1.1" fill="#fff" opacity="0.45"/><circle cx="243" cy="197" r="1.1" fill="#fff" opacity="0.67"/><circle cx="491" cy="192" r="0.6" fill="#fff" opacity="0.76"/><circle cx="54" cy="61" r="1.1" fill="#fff" opacity="0.51"/><text x="40" y="58" font-size="30" fill="#5ad1ff" font-weight="700" text-anchor="start">Mission Island</text><text x="40" y="78" font-size="12" fill="#9aa6c8" font-weight="400" text-anchor="start">Design it. Launch it. Survive it.</text><rect x="40" y="100" width="330" height="170" rx="8" fill="#0d1526" fill-opacity="0.9" stroke="#f97316"/><circle cx="300" cy="160" r="40" fill="#b9bcc4"/><circle cx="288" cy="150" r="7" fill="#8d9099"/><circle cx="312" cy="172" r="5" fill="#8d9099"/><path d="M262 178 A40 40 0 0 0 338 178 L338 200 L262 200z" fill="#1a1f2b"/><text x="56" y="126" font-size="8.5" fill="#f97316" font-weight="700" text-anchor="start">FEATURED MISSION</text><text x="56" y="148" font-size="16" fill="#e8edff" font-weight="700" text-anchor="start">Lunar Ice Prospector</text><text x="56" y="166" font-size="10.5" fill="#9aa6c8" font-weight="400" text-anchor="start">Find water ice in a dark</text><text x="56" y="180" font-size="10.5" fill="#9aa6c8" font-weight="400" text-anchor="start">crater at the Moon's south pole.</text><text x="56" y="204" font-size="10" fill="#e8edff" font-weight="500" text-anchor="start">Medium · $320M · 2 years</text><rect x="56" y="222" width="150" height="30" rx="7" fill="#f97316"/><text x="131.0" y="241.0" font-size="10.5" fill="#fff" font-weight="700" text-anchor="middle">Start mission</text><rect x="392" y="100" width="208" height="36" rx="8" fill="#0d1526" fill-opacity="0.85" stroke="rgba(140,170,255,.25)"/><circle cx="410" cy="118" r="7" fill="#f87171"/><text x="424" y="122" font-size="11" fill="#e8edff" font-weight="600" text-anchor="start">Wildfire Watch</text><rect x="392" y="144" width="208" height="36" rx="8" fill="#0d1526" fill-opacity="0.85" stroke="rgba(140,170,255,.25)"/><circle cx="410" cy="162" r="7" fill="#fbbf24"/><text x="424" y="166" font-size="11" fill="#e8edff" font-weight="600" text-anchor="start">Space Weather Sentinel</text><rect x="392" y="188" width="208" height="36" rx="8" fill="#0d1526" fill-opacity="0.85" stroke="rgba(140,170,255,.25)"/><circle cx="410" cy="206" r="7" fill="#e07a4f"/><text x="424" y="210" font-size="11" fill="#e8edff" font-weight="600" text-anchor="start">Mars Climate Orbiter</text><rect x="392" y="232" width="208" height="36" rx="8" fill="#0d1526" fill-opacity="0.85" stroke="rgba(140,170,255,.25)"/><circle cx="410" cy="250" r="7" fill="#4ade80"/><text x="424" y="254" font-size="11" fill="#e8edff" font-weight="600" text-anchor="start">Sandbox</text><text x="392" y="292" font-size="9.5" fill="#9aa6c8" font-weight="400" text-anchor="start">Difficulty: Cadet · Engineer · Flight Director</text><text x="392" y="308" font-size="9.5" fill="#9aa6c8" font-weight="400" text-anchor="start">Crew: Solo or 2–4 players, one role each</text></svg></div><figcaption><b>1. Menu</b><span>Pick a mission. The featured Moon mission is the one in the video.</span></figcaption></figure><figure class="shot"><div class="frame"><svg viewBox="0 0 640 360" role="img" aria-label="Island mock-up" font-family="Inter, system-ui, sans-serif"><defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6b37a"/><stop offset=".45" stop-color="#9cc4ea"/><stop offset="1" stop-color="#9cc4ea"/></linearGradient></defs><rect width="640" height="360" fill="url(#sk)"/><circle cx="520" cy="120" r="22" fill="#ffe2a8" opacity=".9"/><path d="M0 190 L90 150 L160 180 L250 140 L340 185 L430 150 L520 178 L640 145 L640 210 L0 210z" fill="#6f8f80" opacity=".6"/><rect y="200" width="640" height="160" fill="#2a6fb0"/><ellipse cx="320" cy="290" rx="330" ry="110" fill="#e3d3a1"/><ellipse cx="320" cy="292" rx="300" ry="96" fill="#6aa84f"/><rect x="276" y="198" width="88" height="34" fill="#e5e7eb"/><rect x="284" y="206" width="72" height="12" fill="#1e3a5f"/><path d="M110 262 a34 26 0 0 1 68 0z" fill="#cbd5e1"/><rect x="104" y="262" width="80" height="4" fill="#94a3b8"/><path d="M470 262 a30 24 0 0 1 60 0z" fill="#f8fafc"/><rect x="478" y="240" width="5" height="10" fill="#334155"/><rect x="548" y="214" width="6" height="40" fill="#b91c1c"/><rect x="560" y="206" width="9" height="50" rx="3" fill="#f5f5f5"/><path d="M560 206 l4.5 -10 l4.5 10z" fill="#f5f5f5"/><path d="M60 236 l12 0 l-6 -18z M76 244 l10 0 l-5 -16z M600 250 l12 0 l-6 -20z" fill="#2f7d32"/><ellipse cx="320" cy="304" rx="16" ry="4" fill="#000" opacity=".2"/><rect x="312" y="270" width="16" height="30" rx="8" fill="#f3f4f6"/><circle cx="320" cy="266" r="8" fill="#f3f4f6"/><path d="M314 264 a7 6 0 0 1 12 0z" fill="#1d4ed8"/><rect x="311" y="284" width="18" height="3" fill="#f97316"/><path d="M335 250 l18 -14 l-4 8 l10 2z" fill="#fbbf24"/><rect x="150" y="8" width="340" height="26" rx="13" fill="#0d1526" fill-opacity="0.92" stroke="rgba(140,170,255,.25)"/><circle cx="164" cy="21" r="3.5" fill="#4ade80"/><text x="171" y="24.5" font-size="8.5" fill="#e8edff" font-weight="500" text-anchor="start">Mass</text><circle cx="211" cy="21" r="3.5" fill="#4ade80"/><text x="218" y="24.5" font-size="8.5" fill="#e8edff" font-weight="500" text-anchor="start">Power</text><circle cx="258" cy="21" r="3.5" fill="#fbbf24"/><text x="265" y="24.5" font-size="8.5" fill="#e8edff" font-weight="500" text-anchor="start">Budget</text><circle cx="305" cy="21" r="3.5" fill="#f87171"/><text x="312" y="24.5" font-size="8.5" fill="#e8edff" font-weight="500" text-anchor="start">Data</text><circle cx="352" cy="21" r="3.5" fill="#f87171"/><text x="359" y="24.5" font-size="8.5" fill="#e8edff" font-weight="500" text-anchor="start">Comms</text><circle cx="399" cy="21" r="3.5" fill="#4ade80"/><text x="406" y="24.5" font-size="8.5" fill="#e8edff" font-weight="500" text-anchor="start">Time</text><circle cx="446" cy="21" r="3.5" fill="#fbbf24"/><text x="453" y="24.5" font-size="8.5" fill="#e8edff" font-weight="500" text-anchor="start">Science</text><rect x="190" y="40" width="260" height="20" rx="10" fill="#0d1526" fill-opacity="0.85" stroke="rgba(140,170,255,.25)"/><text x="320" y="54" font-size="9.5" fill="#e8edff" font-weight="500" text-anchor="middle">Next: choose instruments at the Science Lab  →</text><rect x="16" y="316" width="150" height="28" rx="14" fill="#0d1526" fill-opacity="0.85" stroke="rgba(140,170,255,.25)"/><text x="91" y="334" font-size="10" fill="#e8edff" font-weight="600" text-anchor="middle">E  enter station</text></svg></div><figcaption><b>2. Island (open world)</b><span>Walk between five buildings. One compact resource bar, one "what next" line, a guide arrow.</span></figcaption></figure><figure class="shot"><div class="frame"><svg viewBox="0 0 640 360" role="img" aria-label="Station panel mock-up" font-family="Inter, system-ui, sans-serif"><rect width="640" height="360" fill="#7aa9d6"/><rect y="230" width="640" height="130" fill="#6aa84f"/><rect x="40" y="230" width="140" height="20" fill="#475569"/><rect x="80" y="150" width="60" height="70" fill="#d4a017"/><rect x="10" y="168" width="64" height="34" fill="#1e3a8a"/><rect x="146" y="168" width="64" height="34" fill="#1e3a8a"/><path d="M92 150 q18 -24 36 0" fill="#f3f4f6"/><circle cx="110" cy="232" r="0"/><rect x="150" y="8" width="340" height="26" rx="13" fill="#0d1526" fill-opacity="0.92" stroke="rgba(140,170,255,.25)"/><circle cx="164" cy="21" r="3.5" fill="#4ade80"/><text x="171" y="24.5" font-size="8.5" fill="#e8edff" font-weight="500" text-anchor="start">Mass</text><circle cx="211" cy="21" r="3.5" fill="#fbbf24"/><text x="218" y="24.5" font-size="8.5" fill="#e8edff" font-weight="500" text-anchor="start">Power</text><circle cx="258" cy="21" r="3.5" fill="#fbbf24"/><text x="265" y="24.5" font-size="8.5" fill="#e8edff" font-weight="500" text-anchor="start">Budget</text><circle cx="305" cy="21" r="3.5" fill="#4ade80"/><text x="312" y="24.5" font-size="8.5" fill="#e8edff" font-weight="500" text-anchor="start">Data</text><circle cx="352" cy="21" r="3.5" fill="#4ade80"/><text x="359" y="24.5" font-size="8.5" fill="#e8edff" font-weight="500" text-anchor="start">Comms</text><circle cx="399" cy="21" r="3.5" fill="#4ade80"/><text x="406" y="24.5" font-size="8.5" fill="#e8edff" font-weight="500" text-anchor="start">Time</text><circle cx="446" cy="21" r="3.5" fill="#4ade80"/><text x="453" y="24.5" font-size="8.5" fill="#e8edff" font-weight="500" text-anchor="start">Science</text><text x="176" y="46" font-size="9" fill="#fbbf24" font-weight="600" text-anchor="middle">+12 kg</text><text x="225" y="46" font-size="8" fill="#9aa6c8" font-weight="500" text-anchor="middle">preview</text><rect x="300" y="64" width="324" height="282" rx="8" fill="#0d1526" fill-opacity="0.94" stroke="rgba(140,170,255,.25)"/><text x="316" y="88" font-size="15" fill="#e8edff" font-weight="700" text-anchor="start">Assembly Hangar</text><text x="316" y="104" font-size="9.5" fill="#5ad1ff" font-weight="600" text-anchor="start">Spacecraft Engineer</text><text x="608" y="88" font-size="10" fill="#9aa6c8" font-weight="500" text-anchor="end">3 / 7</text><circle cx="316" cy="118" r="3.5" fill="#5ad1ff"/><circle cx="328" cy="118" r="3.5" fill="#5ad1ff"/><circle cx="340" cy="118" r="3.5" fill="#5ad1ff"/><circle cx="352" cy="118" r="3.5" fill="#33405e"/><circle cx="364" cy="118" r="3.5" fill="#33405e"/><circle cx="376" cy="118" r="3.5" fill="#33405e"/><circle cx="388" cy="118" r="3.5" fill="#33405e"/><text x="316" y="142" font-size="13" fill="#e8edff" font-weight="700" text-anchor="start">Battery</text><text x="316" y="158" font-size="9.5" fill="#9aa6c8" font-weight="400" text-anchor="start">Keeps everything alive in the planet's shadow.</text><rect x="316" y="170" width="292" height="38" rx="7" fill="#151f36" stroke="#2a3656" stroke-width="1"/><text x="328" y="186" font-size="11" fill="#e8edff" font-weight="600" text-anchor="start">Small Battery</text><text x="328" y="200" font-size="9.5" fill="#9aa6c8" font-weight="400" text-anchor="start">200 Wh</text><text x="596" y="194" font-size="9.5" fill="#e8edff" font-weight="500" text-anchor="end">3 kg · $0.5M</text><rect x="316" y="216" width="292" height="38" rx="7" fill="#123048" stroke="#5ad1ff" stroke-width="1.6"/><text x="328" y="232" font-size="11" fill="#e8edff" font-weight="600" text-anchor="start">Medium Battery</text><text x="328" y="246" font-size="9.5" fill="#9aa6c8" font-weight="400" text-anchor="start">1,000 Wh</text><text x="596" y="240" font-size="9.5" fill="#e8edff" font-weight="500" text-anchor="end">12 kg · $2M</text><rect x="316" y="262" width="292" height="38" rx="7" fill="#151f36" stroke="#2a3656" stroke-width="1"/><text x="328" y="278" font-size="11" fill="#e8edff" font-weight="600" text-anchor="start">Large Battery</text><text x="328" y="292" font-size="9.5" fill="#9aa6c8" font-weight="400" text-anchor="start">4,000 Wh</text><text x="596" y="286" font-size="9.5" fill="#e8edff" font-weight="500" text-anchor="end">45 kg · $6M</text><rect x="316" y="310" width="90" height="26" rx="7" fill="#22304d"/><text x="361.0" y="327.0" font-size="10.5" fill="#e8edff" font-weight="700" text-anchor="middle">Back</text><rect x="518" y="310" width="90" height="26" rx="7" fill="#5ad1ff"/><text x="563.0" y="327.0" font-size="10.5" fill="#001" font-weight="700" text-anchor="middle">Next</text></svg></div><figcaption><b>3. Station panel</b><span>One decision per page. Hovering a card previews how each resource bar moves.</span></figcaption></figure><figure class="shot"><div class="frame"><svg viewBox="0 0 640 360" role="img" aria-label="CAPCOM chat mock-up" font-family="Inter, system-ui, sans-serif"><rect width="640" height="360" fill="#7aa9d6"/><rect y="230" width="640" height="130" fill="#6aa84f"/><rect x="150" y="8" width="340" height="26" rx="13" fill="#0d1526" fill-opacity="0.92" stroke="rgba(140,170,255,.25)"/><circle cx="164" cy="21" r="3.5" fill="#4ade80"/><text x="171" y="24.5" font-size="8.5" fill="#e8edff" font-weight="500" text-anchor="start">Mass</text><circle cx="211" cy="21" r="3.5" fill="#4ade80"/><text x="218" y="24.5" font-size="8.5" fill="#e8edff" font-weight="500" text-anchor="start">Power</text><circle cx="258" cy="21" r="3.5" fill="#4ade80"/><text x="265" y="24.5" font-size="8.5" fill="#e8edff" font-weight="500" text-anchor="start">Budget</text><circle cx="305" cy="21" r="3.5" fill="#f87171"/><text x="312" y="24.5" font-size="8.5" fill="#e8edff" font-weight="500" text-anchor="start">Data</text><circle cx="352" cy="21" r="3.5" fill="#f87171"/><text x="359" y="24.5" font-size="8.5" fill="#e8edff" font-weight="500" text-anchor="start">Comms</text><circle cx="399" cy="21" r="3.5" fill="#4ade80"/><text x="406" y="24.5" font-size="8.5" fill="#e8edff" font-weight="500" text-anchor="start">Time</text><circle cx="446" cy="21" r="3.5" fill="#fbbf24"/><text x="453" y="24.5" font-size="8.5" fill="#e8edff" font-weight="500" text-anchor="start">Science</text><rect x="330" y="64" width="294" height="282" rx="8" fill="#0d1526" fill-opacity="0.95" stroke="rgba(140,170,255,.25)"/><text x="346" y="88" font-size="15" fill="#e8edff" font-weight="700" text-anchor="start">Ask CAPCOM</text><circle cx="600" cy="84" r="5" fill="#4ade80"/><rect x="430" y="102" width="178" height="34" rx="9" fill="#1d3b63"/><text x="440" y="116" font-size="9.5" fill="#e8edff" font-weight="400" text-anchor="start">My data bar is red. How do</text><text x="440" y="129" font-size="9.5" fill="#e8edff" font-weight="400" text-anchor="start">I fix it?</text><rect x="346" y="146" width="200" height="20" rx="10" fill="#22304d"/><text x="356" y="160" font-size="9" fill="#5ad1ff" font-weight="600" text-anchor="start">ran what_if: Ka-band, DSN</text><rect x="346" y="174" width="262" height="96" rx="9" fill="#151f36"/><text x="356" y="192" font-size="9.5" fill="#e8edff" font-weight="400" text-anchor="start">Your telescope makes 250 Gb a day but</text><text x="356" y="208" font-size="9.5" fill="#e8edff" font-weight="400" text-anchor="start">your antenna sends only 144 Gb.</text><text x="356" y="224" font-size="9.5" fill="#e8edff" font-weight="400" text-anchor="start">Ka-band: 100% sent home, +$8M.</text><text x="356" y="240" font-size="9.5" fill="#e8edff" font-weight="400" text-anchor="start">Deep Space Network: 92%, +$24M.</text><text x="356" y="256" font-size="9.5" fill="#5ad1ff" font-weight="600" text-anchor="start">Ka-band is the cheaper fix.</text><rect x="346" y="280" width="128" height="26" rx="7" fill="#4ade80"/><text x="410.0" y="297.0" font-size="10.5" fill="#001" font-weight="700" text-anchor="middle">Apply Ka-band</text><rect x="482" y="280" width="126" height="26" rx="7" fill="#22304d"/><text x="545.0" y="297.0" font-size="10.5" fill="#e8edff" font-weight="700" text-anchor="middle">Ask another</text><rect x="346" y="314" width="262" height="24" rx="12" fill="#0d1526" fill-opacity="0.9" stroke="rgba(140,170,255,.25)"/><text x="358" y="330" font-size="9.5" fill="#9aa6c8" font-weight="400" text-anchor="start">Type a question…</text></svg></div><figcaption><b>4. Ask CAPCOM (AI)</b><span>Answers use real numbers from the engine. One click applies the suggested change.</span></figcaption></figure><figure class="shot"><div class="frame"><svg viewBox="0 0 640 360" role="img" aria-label="Review board mock-up" font-family="Inter, system-ui, sans-serif"><rect width="640" height="360" fill="#0b1224"/><text x="40" y="48" font-size="20" fill="#e8edff" font-weight="700" text-anchor="start">Design Review Board</text><text x="40" y="68" font-size="10" fill="#9aa6c8" font-weight="400" text-anchor="start">CML 4 · Point design check · reviewed by CAPCOM</text><rect x="470" y="30" width="130" height="44" rx="8" fill="#0d1526" fill-opacity="0.9" stroke="#4ade80"/><text x="535" y="50" font-size="11" fill="#4ade80" font-weight="700" text-anchor="middle">Launchable</text><text x="535" y="65" font-size="9" fill="#9aa6c8" font-weight="400" text-anchor="middle">2 warnings</text><rect x="40" y="94" width="560" height="66" rx="8" fill="#0d1526" fill-opacity="0.92" stroke="rgba(140,170,255,.25)"/><text x="56" y="116" font-size="13" fill="#e8edff" font-weight="700" text-anchor="start">1. Add a relay mast on the rim</text><text x="56" y="134" font-size="10" fill="#9aa6c8" font-weight="400" text-anchor="start">The rover will lose Earth behind the rim.</text><rect x="56" y="140" width="200" height="14" rx="7" fill="#4ade80" fill-opacity=".15"/><text x="64" y="150" font-size="9" fill="#4ade80" font-weight="600" text-anchor="start">tested: data home 41% → 96%</text><rect x="504" y="114" width="80" height="26" rx="7" fill="#5ad1ff"/><text x="544.0" y="131.0" font-size="10.5" fill="#001" font-weight="700" text-anchor="middle">Apply</text><rect x="40" y="172" width="560" height="66" rx="8" fill="#0d1526" fill-opacity="0.92" stroke="rgba(140,170,255,.25)"/><text x="56" y="194" font-size="13" fill="#e8edff" font-weight="700" text-anchor="start">2. Swap to the large battery</text><text x="56" y="212" font-size="10" fill="#9aa6c8" font-weight="400" text-anchor="start">Only 6 h of shadow time today.</text><rect x="56" y="218" width="200" height="14" rx="7" fill="#4ade80" fill-opacity=".15"/><text x="64" y="228" font-size="9" fill="#4ade80" font-weight="600" text-anchor="start">tested: shadow time 6 h → 17 h</text><rect x="504" y="192" width="80" height="26" rx="7" fill="#5ad1ff"/><text x="544.0" y="209.0" font-size="10.5" fill="#001" font-weight="700" text-anchor="middle">Apply</text><rect x="40" y="250" width="560" height="66" rx="8" fill="#0d1526" fill-opacity="0.92" stroke="rgba(140,170,255,.25)"/><text x="56" y="272" font-size="13" fill="#e8edff" font-weight="700" text-anchor="start">3. Drop the wide-field camera</text><text x="56" y="290" font-size="10" fill="#9aa6c8" font-weight="400" text-anchor="start">Little value for ice; saves 5 kg, $3M.</text><rect x="56" y="296" width="200" height="14" rx="7" fill="#fbbf24" fill-opacity=".15"/><text x="64" y="306" font-size="9" fill="#fbbf24" font-weight="600" text-anchor="start">tested: science −2%, reserve +1%</text><rect x="504" y="270" width="80" height="26" rx="7" fill="#5ad1ff"/><text x="544.0" y="287.0" font-size="10.5" fill="#001" font-weight="700" text-anchor="middle">Apply</text></svg></div><figcaption><b>5. Design Review Board (AI)</b><span>Before launch, three ranked suggestions. Each one was tested by the engine first.</span></figcaption></figure><figure class="shot"><div class="frame"><svg viewBox="0 0 640 360" role="img" aria-label="Launch mock-up" font-family="Inter, system-ui, sans-serif"><defs><linearGradient id="ls" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#05070f"/><stop offset=".55" stop-color="#1b3a6b"/><stop offset="1" stop-color="#e8a36a"/></linearGradient><radialGradient id="fl"><stop offset="0" stop-color="#fff6c8"/><stop offset=".5" stop-color="#ffb347"/><stop offset="1" stop-color="#ff6b2b" stop-opacity="0"/></radialGradient></defs><rect width="640" height="360" fill="url(#ls)"/><circle cx="399" cy="111" r="1.1" fill="#fff" opacity="0.87"/><circle cx="474" cy="138" r="0.6" fill="#fff" opacity="0.82"/><circle cx="497" cy="37" r="0.6" fill="#fff" opacity="0.85"/><circle cx="72" cy="70" r="0.6" fill="#fff" opacity="0.59"/><circle cx="65" cy="37" r="1.1" fill="#fff" opacity="0.51"/><circle cx="179" cy="137" r="0.8" fill="#fff" opacity="0.48"/><circle cx="510" cy="21" r="1.1" fill="#fff" opacity="0.62"/><circle cx="85" cy="146" r="0.6" fill="#fff" opacity="0.50"/><circle cx="138" cy="147" r="0.6" fill="#fff" opacity="0.54"/><circle cx="615" cy="81" r="1.1" fill="#fff" opacity="0.71"/><circle cx="116" cy="145" r="0.6" fill="#fff" opacity="0.88"/><circle cx="572" cy="45" r="0.8" fill="#fff" opacity="0.61"/><circle cx="599" cy="40" r="0.8" fill="#fff" opacity="0.55"/><circle cx="386" cy="1" r="1.1" fill="#fff" opacity="0.75"/><circle cx="42" cy="53" r="0.8" fill="#fff" opacity="0.64"/><circle cx="202" cy="72" r="1.1" fill="#fff" opacity="0.49"/><circle cx="164" cy="141" r="1.1" fill="#fff" opacity="0.58"/><circle cx="259" cy="82" r="0.8" fill="#fff" opacity="0.58"/><circle cx="370" cy="1" r="0.6" fill="#fff" opacity="0.75"/><circle cx="399" cy="143" r="0.6" fill="#fff" opacity="0.78"/><circle cx="595" cy="141" r="0.8" fill="#fff" opacity="0.66"/><circle cx="571" cy="38" r="0.8" fill="#fff" opacity="0.45"/><circle cx="479" cy="120" r="0.8" fill="#fff" opacity="0.42"/><circle cx="605" cy="14" r="0.8" fill="#fff" opacity="0.66"/><circle cx="232" cy="22" r="0.8" fill="#fff" opacity="0.86"/><circle cx="349" cy="47" r="0.8" fill="#fff" opacity="0.55"/><circle cx="511" cy="94" r="1.1" fill="#fff" opacity="0.74"/><circle cx="638" cy="24" r="0.6" fill="#fff" opacity="0.44"/><circle cx="384" cy="139" r="0.6" fill="#fff" opacity="0.52"/><circle cx="380" cy="124" r="0.8" fill="#fff" opacity="0.73"/><circle cx="93" cy="147" r="1.1" fill="#fff" opacity="0.42"/><circle cx="316" cy="126" r="0.6" fill="#fff" opacity="0.89"/><circle cx="361" cy="20" r="0.8" fill="#fff" opacity="0.45"/><circle cx="278" cy="22" r="0.8" fill="#fff" opacity="0.55"/><circle cx="290" cy="150" r="0.6" fill="#fff" opacity="0.89"/><circle cx="290" cy="73" r="1.1" fill="#fff" opacity="0.56"/><circle cx="175" cy="71" r="0.6" fill="#fff" opacity="0.46"/><circle cx="526" cy="80" r="0.6" fill="#fff" opacity="0.71"/><circle cx="320" cy="51" r="0.6" fill="#fff" opacity="0.65"/><circle cx="330" cy="82" r="1.1" fill="#fff" opacity="0.58"/><path d="M300 170 h40 v-90 l-20 -34 l-20 34z" fill="#f5f5f5"/><rect x="300" y="120" width="40" height="5" fill="#2563eb"/><ellipse cx="320" cy="210" rx="26" ry="46" fill="url(#fl)"/><path d="M180 360 q140 -120 280 0z" fill="#e5e5e5" opacity=".35"/><rect x="24" y="24" width="170" height="64" rx="8" fill="#0d1526" fill-opacity="0.8" stroke="rgba(140,170,255,.25)"/><text x="40" y="48" font-size="18" fill="#e8edff" font-weight="700" text-anchor="start">T+ 00:42</text><text x="40" y="68" font-size="9.5" fill="#9aa6c8" font-weight="400" text-anchor="start">Altitude 11.8 km · 1,240 km/h</text><rect x="446" y="24" width="170" height="40" rx="8" fill="#0d1526" fill-opacity="0.8" stroke="rgba(140,170,255,.25)"/><text x="462" y="49" font-size="10" fill="#e8edff" font-weight="600" text-anchor="start">Large Reusable · 98%</text><rect x="220" y="316" width="200" height="28" rx="14" fill="#0d1526" fill-opacity="0.8" stroke="rgba(140,170,255,.25)"/><text x="320" y="334" font-size="10" fill="#fbbf24" font-weight="600" text-anchor="middle">Stage separation in 3…</text></svg></div><figcaption><b>6. Launch</b><span>A short cinematic: camera cuts, engine glow, sky turning black, staging.</span></figcaption></figure><figure class="shot"><div class="frame"><svg viewBox="0 0 640 360" role="img" aria-label="Flight mock-up" font-family="Inter, system-ui, sans-serif"><rect width="640" height="360" fill="#02030a"/><circle cx="207" cy="54" r="1.1" fill="#fff" opacity="0.42"/><circle cx="526" cy="34" r="1.1" fill="#fff" opacity="0.43"/><circle cx="325" cy="13" r="0.8" fill="#fff" opacity="0.61"/><circle cx="154" cy="198" r="0.6" fill="#fff" opacity="0.81"/><circle cx="79" cy="80" r="1.1" fill="#fff" opacity="0.69"/><circle cx="40" cy="211" r="0.6" fill="#fff" opacity="0.89"/><circle cx="30" cy="309" r="0.8" fill="#fff" opacity="0.61"/><circle cx="346" cy="206" r="1.1" fill="#fff" opacity="0.81"/><circle cx="116" cy="209" r="1.1" fill="#fff" opacity="0.49"/><circle cx="62" cy="256" r="1.1" fill="#fff" opacity="0.43"/><circle cx="132" cy="245" r="0.8" fill="#fff" opacity="0.79"/><circle cx="298" cy="332" r="0.8" fill="#fff" opacity="0.55"/><circle cx="508" cy="252" r="0.6" fill="#fff" opacity="0.44"/><circle cx="192" cy="178" r="0.8" fill="#fff" opacity="0.76"/><circle cx="184" cy="353" r="0.6" fill="#fff" opacity="0.66"/><circle cx="106" cy="123" r="0.8" fill="#fff" opacity="0.61"/><circle cx="616" cy="28" r="1.1" fill="#fff" opacity="0.69"/><circle cx="560" cy="113" r="1.1" fill="#fff" opacity="0.58"/><circle cx="318" cy="287" r="0.6" fill="#fff" opacity="0.82"/><circle cx="605" cy="171" r="1.1" fill="#fff" opacity="0.43"/><circle cx="468" cy="111" r="1.1" fill="#fff" opacity="0.90"/><circle cx="526" cy="102" r="0.8" fill="#fff" opacity="0.84"/><circle cx="222" cy="339" r="0.8" fill="#fff" opacity="0.48"/><circle cx="75" cy="21" r="0.8" fill="#fff" opacity="0.46"/><circle cx="158" cy="141" r="0.8" fill="#fff" opacity="0.44"/><circle cx="287" cy="198" r="0.6" fill="#fff" opacity="0.81"/><circle cx="553" cy="100" r="0.8" fill="#fff" opacity="0.89"/><circle cx="437" cy="137" r="0.6" fill="#fff" opacity="0.48"/><circle cx="113" cy="84" r="0.6" fill="#fff" opacity="0.41"/><circle cx="532" cy="66" r="0.8" fill="#fff" opacity="0.40"/><circle cx="268" cy="133" r="1.1" fill="#fff" opacity="0.56"/><circle cx="80" cy="309" r="1.1" fill="#fff" opacity="0.73"/><circle cx="473" cy="164" r="1.1" fill="#fff" opacity="0.80"/><circle cx="251" cy="144" r="0.6" fill="#fff" opacity="0.64"/><circle cx="256" cy="69" r="0.6" fill="#fff" opacity="0.62"/><circle cx="70" cy="216" r="0.6" fill="#fff" opacity="0.40"/><circle cx="97" cy="37" r="0.8" fill="#fff" opacity="0.71"/><circle cx="45" cy="75" r="0.8" fill="#fff" opacity="0.47"/><circle cx="161" cy="125" r="0.8" fill="#fff" opacity="0.64"/><circle cx="74" cy="176" r="0.8" fill="#fff" opacity="0.64"/><circle cx="200" cy="52" r="1.1" fill="#fff" opacity="0.57"/><circle cx="169" cy="298" r="0.6" fill="#fff" opacity="0.66"/><circle cx="131" cy="343" r="0.8" fill="#fff" opacity="0.47"/><circle cx="348" cy="10" r="1.1" fill="#fff" opacity="0.55"/><circle cx="411" cy="33" r="0.8" fill="#fff" opacity="0.66"/><circle cx="581" cy="128" r="0.6" fill="#fff" opacity="0.67"/><circle cx="499" cy="119" r="0.6" fill="#fff" opacity="0.71"/><circle cx="505" cy="273" r="0.6" fill="#fff" opacity="0.80"/><circle cx="524" cy="266" r="0.6" fill="#fff" opacity="0.50"/><circle cx="315" cy="263" r="0.6" fill="#fff" opacity="0.80"/><circle cx="302" cy="70" r="1.1" fill="#fff" opacity="0.88"/><circle cx="286" cy="337" r="0.8" fill="#fff" opacity="0.88"/><circle cx="233" cy="79" r="0.6" fill="#fff" opacity="0.64"/><circle cx="216" cy="174" r="1.1" fill="#fff" opacity="0.82"/><circle cx="307" cy="235" r="1.1" fill="#fff" opacity="0.44"/><circle cx="423" cy="328" r="1.1" fill="#fff" opacity="0.78"/><circle cx="306" cy="64" r="1.1" fill="#fff" opacity="0.57"/><circle cx="513" cy="350" r="0.8" fill="#fff" opacity="0.63"/><circle cx="476" cy="31" r="0.6" fill="#fff" opacity="0.49"/><circle cx="81" cy="54" r="0.8" fill="#fff" opacity="0.80"/><circle cx="94" cy="298" r="0.8" fill="#fff" opacity="0.73"/><circle cx="224" cy="198" r="0.6" fill="#fff" opacity="0.41"/><circle cx="512" cy="261" r="0.6" fill="#fff" opacity="0.66"/><circle cx="598" cy="156" r="0.6" fill="#fff" opacity="0.81"/><circle cx="135" cy="91" r="0.8" fill="#fff" opacity="0.65"/><circle cx="489" cy="117" r="1.1" fill="#fff" opacity="0.61"/><circle cx="84" cy="328" r="0.8" fill="#fff" opacity="0.85"/><circle cx="424" cy="293" r="1.1" fill="#fff" opacity="0.61"/><circle cx="587" cy="181" r="1.1" fill="#fff" opacity="0.48"/><circle cx="327" cy="314" r="0.6" fill="#fff" opacity="0.70"/><circle cx="497" cy="54" r="0.6" fill="#fff" opacity="0.64"/><circle cx="464" cy="200" r="0.8" fill="#fff" opacity="0.74"/><circle cx="340" cy="174" r="0.6" fill="#fff" opacity="0.84"/><circle cx="36" cy="69" r="0.6" fill="#fff" opacity="0.79"/><circle cx="325" cy="202" r="0.6" fill="#fff" opacity="0.62"/><circle cx="392" cy="182" r="1.1" fill="#fff" opacity="0.50"/><circle cx="177" cy="183" r="0.8" fill="#fff" opacity="0.65"/><circle cx="158" cy="188" r="0.8" fill="#fff" opacity="0.86"/><circle cx="571" cy="73" r="0.8" fill="#fff" opacity="0.47"/><circle cx="78" cy="159" r="0.6" fill="#fff" opacity="0.74"/><circle cx="274" cy="77" r="0.8" fill="#fff" opacity="0.79"/><circle cx="574" cy="56" r="1.1" fill="#fff" opacity="0.72"/><circle cx="234" cy="91" r="0.6" fill="#fff" opacity="0.88"/><circle cx="141" cy="343" r="0.8" fill="#fff" opacity="0.84"/><circle cx="104" cy="240" r="0.6" fill="#fff" opacity="0.48"/><circle cx="276" cy="186" r="0.8" fill="#fff" opacity="0.61"/><circle cx="228" cy="33" r="0.8" fill="#fff" opacity="0.41"/><circle cx="355" cy="159" r="0.6" fill="#fff" opacity="0.59"/><circle cx="331" cy="106" r="0.6" fill="#fff" opacity="0.46"/><circle cx="588" cy="82" r="0.6" fill="#fff" opacity="0.44"/><circle cx="174" cy="326" r="0.6" fill="#fff" opacity="0.54"/><circle cx="83" cy="152" r="1.1" fill="#fff" opacity="0.81"/><circle cx="166" cy="54" r="1.1" fill="#fff" opacity="0.69"/><circle cx="448" cy="32" r="0.6" fill="#fff" opacity="0.80"/><circle cx="117" cy="322" r="0.8" fill="#fff" opacity="0.87"/><circle cx="406" cy="289" r="0.6" fill="#fff" opacity="0.70"/><circle cx="142" cy="95" r="0.6" fill="#fff" opacity="0.63"/><circle cx="217" cy="199" r="0.8" fill="#fff" opacity="0.71"/><circle cx="28" cy="255" r="0.6" fill="#fff" opacity="0.88"/><circle cx="168" cy="65" r="0.8" fill="#fff" opacity="0.71"/><circle cx="340" cy="74" r="0.8" fill="#fff" opacity="0.65"/><circle cx="114" cy="125" r="0.6" fill="#fff" opacity="0.90"/><circle cx="24" cy="7" r="1.1" fill="#fff" opacity="0.68"/><circle cx="121" cy="171" r="0.8" fill="#fff" opacity="0.45"/><circle cx="524" cy="156" r="0.8" fill="#fff" opacity="0.67"/><circle cx="569" cy="349" r="0.8" fill="#fff" opacity="0.74"/><circle cx="629" cy="123" r="1.1" fill="#fff" opacity="0.76"/><circle cx="89" cy="356" r="0.6" fill="#fff" opacity="0.82"/><circle cx="9" cy="225" r="0.8" fill="#fff" opacity="0.62"/><circle cx="35" cy="239" r="0.8" fill="#fff" opacity="0.84"/><circle cx="250" cy="170" r="92" fill="#9ea3ad"/><circle cx="220" cy="140" r="14" fill="#83878f"/><circle cx="280" cy="200" r="10" fill="#83878f"/><path d="M158 170 a92 92 0 0 0 184 0 a92 30 0 0 1 -184 0" fill="#000" opacity=".25"/><ellipse cx="250" cy="170" rx="104" ry="104" fill="none" stroke="#5ad1ff" stroke-opacity=".5" stroke-dasharray="3 4"/><rect x="345" y="96" width="10" height="8" fill="#d4a017"/><rect x="333" y="98" width="10" height="4" fill="#1e3a8a"/><rect x="357" y="98" width="10" height="4" fill="#1e3a8a"/><rect x="392" y="40" width="232" height="150" rx="8" fill="#0d1526" fill-opacity="0.95" stroke="#fbbf24"/><text x="408" y="62" font-size="13" fill="#e8edff" font-weight="700" text-anchor="start">Solar storm incoming</text><text x="408" y="78" font-size="9" fill="#fbbf24" font-weight="600" text-anchor="start">Comms & Ops decides</text><text x="408" y="98" font-size="9.5" fill="#9aa6c8" font-weight="400" text-anchor="start">"CAPCOM: big flare on the Sun. Your</text><text x="408" y="111" font-size="9.5" fill="#9aa6c8" font-weight="400" text-anchor="start">computer isn't radiation-hardened."</text><rect x="408" y="124" width="200" height="24" rx="7" fill="#22304d"/><text x="508.0" y="140.0" font-size="10.5" fill="#e8edff" font-weight="700" text-anchor="middle">Safe mode for 5 days</text><rect x="408" y="154" width="200" height="24" rx="7" fill="#22304d"/><text x="508.0" y="170.0" font-size="10.5" fill="#e8edff" font-weight="700" text-anchor="middle">Keep observing (40% risk)</text><rect x="16" y="300" width="608" height="48" rx="8" fill="#0d1526" fill-opacity="0.9" stroke="rgba(140,170,255,.25)"/><text x="30" y="320" font-size="11" fill="#e8edff" font-weight="700" text-anchor="start">Day 412 · year 1.1 of 2</text><text x="200" y="318" font-size="9" fill="#9aa6c8" font-weight="400" text-anchor="start">Power</text><text x="200" y="334" font-size="12" fill="#4ade80" font-weight="700" text-anchor="start">92%</text><text x="304" y="318" font-size="9" fill="#9aa6c8" font-weight="400" text-anchor="start">Downlink</text><text x="304" y="334" font-size="12" fill="#4ade80" font-weight="700" text-anchor="start">100%</text><text x="408" y="318" font-size="9" fill="#9aa6c8" font-weight="400" text-anchor="start">Science</text><text x="408" y="334" font-size="12" fill="#fbbf24" font-weight="700" text-anchor="start">21 / 50</text><text x="512" y="318" font-size="9" fill="#9aa6c8" font-weight="400" text-anchor="start">Spent</text><text x="512" y="334" font-size="12" fill="#4ade80" font-weight="700" text-anchor="start">$287M</text><text x="30" y="336" font-size="10" fill="#5ad1ff" font-weight="600" text-anchor="start">1×  3×  10×  ⏸</text></svg></div><figcaption><b>7. Flight + AI events</b><span>Days tick by. The AI Mission Director picks an event and speaks as CAPCOM; the team decides.</span></figcaption></figure><figure class="shot"><div class="frame"><svg viewBox="0 0 640 360" role="img" aria-label="Shadowline planning mock-up" font-family="Inter, system-ui, sans-serif"><defs><radialGradient id="cr" cx=".52" cy=".55" r=".4"><stop offset="0" stop-color="#050608"/><stop offset=".7" stop-color="#14171d"/><stop offset="1" stop-color="#6c7078"/></radialGradient></defs><rect width="640" height="360" fill="#7d8189"/><ellipse cx="330" cy="200" rx="190" ry="140" fill="url(#cr)"/><path d="M140 200 a190 140 0 0 1 380 0" fill="none" stroke="#c9ccd2" stroke-width="5" opacity=".7"/><ellipse cx="350" cy="230" rx="60" ry="32" fill="#22d3ee" opacity=".22"/><ellipse cx="300" cy="190" rx="40" ry="22" fill="#22d3ee" opacity=".18"/><path d="M520 92 L470 132 L392 186 L340 228 L250 120" fill="none" stroke="#fff" stroke-width="2.5" stroke-dasharray="7 5"/><circle cx="520" cy="92" r="7" fill="#4ade80" stroke="#000" stroke-width="1"/><text x="531" y="86" font-size="10" fill="#e8edff" font-weight="700" text-anchor="start">Land</text><circle cx="470" cy="132" r="7" fill="#e8edff" stroke="#000" stroke-width="1"/><text x="481" y="126" font-size="10" fill="#e8edff" font-weight="700" text-anchor="start">1</text><circle cx="392" cy="186" r="7" fill="#5ad1ff" stroke="#000" stroke-width="1"/><text x="403" y="180" font-size="10" fill="#e8edff" font-weight="700" text-anchor="start">2 sample</text><circle cx="340" cy="228" r="7" fill="#5ad1ff" stroke="#000" stroke-width="1"/><text x="351" y="222" font-size="10" fill="#e8edff" font-weight="700" text-anchor="start">3 sample</text><circle cx="250" cy="120" r="7" fill="#fbbf24" stroke="#000" stroke-width="1"/><text x="261" y="114" font-size="10" fill="#e8edff" font-weight="700" text-anchor="start">Safe haven</text><path d="M392 186 L370 168 M340 228 L318 210" stroke="#f87171" stroke-width="2"/><rect x="16" y="16" width="186" height="110" rx="8" fill="#0d1526" fill-opacity="0.92" stroke="rgba(140,170,255,.25)"/><text x="30" y="38" font-size="13" fill="#e8edff" font-weight="700" text-anchor="start">Route plan</text><text x="30" y="56" font-size="10" fill="#9aa6c8" font-weight="400" text-anchor="start">Distance 3.4 km</text><text x="30" y="72" font-size="10" fill="#fbbf24" font-weight="400" text-anchor="start">Time in shadow 14 h</text><text x="30" y="88" font-size="10" fill="#f87171" font-weight="400" text-anchor="start">Earth visible 38% of route</text><text x="30" y="104" font-size="10" fill="#f87171" font-weight="400" text-anchor="start">Relay: none</text><rect x="436" y="300" width="188" height="44" rx="8" fill="#0d1526" fill-opacity="0.92" stroke="rgba(140,170,255,.25)"/><rect x="446" y="309" width="168" height="26" rx="7" fill="#f97316"/><text x="530.0" y="326.0" font-size="10.5" fill="#fff" font-weight="700" text-anchor="middle">GO</text><rect x="16" y="300" width="240" height="44" rx="8" fill="#0d1526" fill-opacity="0.92" stroke="rgba(140,170,255,.25)"/><text x="30" y="318" font-size="9" fill="#9aa6c8" font-weight="400" text-anchor="start">Overlays</text><text x="30" y="334" font-size="10" fill="#e8edff" font-weight="600" text-anchor="start">Sunlight  ·  Earth contact  ·  Ice</text><circle cx="600" cy="40" r="10" fill="#ffe08a"/><text x="600" y="64" font-size="9" fill="#e8edff" font-weight="500" text-anchor="middle">Sun 1.2° high</text></svg></div><figcaption><b>8. Shadowline: plan</b><span>Moon only. Place waypoints on real NASA terrain, toggle sunlight and Earth-contact overlays, then GO.</span></figcaption></figure><figure class="shot"><div class="frame"><svg viewBox="0 0 640 360" role="img" aria-label="Shadowline drive mock-up" font-family="Inter, system-ui, sans-serif"><rect width="640" height="360" fill="#03040a"/><circle cx="296" cy="52" r="0.6" fill="#fff" opacity="0.49"/><circle cx="433" cy="47" r="0.8" fill="#fff" opacity="0.85"/><circle cx="52" cy="78" r="1.1" fill="#fff" opacity="0.75"/><circle cx="466" cy="24" r="0.8" fill="#fff" opacity="0.88"/><circle cx="270" cy="24" r="0.6" fill="#fff" opacity="0.46"/><circle cx="324" cy="129" r="1.1" fill="#fff" opacity="0.43"/><circle cx="441" cy="111" r="0.6" fill="#fff" opacity="0.86"/><circle cx="131" cy="31" r="0.8" fill="#fff" opacity="0.84"/><circle cx="494" cy="128" r="0.8" fill="#fff" opacity="0.54"/><circle cx="518" cy="28" r="0.6" fill="#fff" opacity="0.84"/><circle cx="35" cy="53" r="0.8" fill="#fff" opacity="0.47"/><circle cx="152" cy="103" r="0.6" fill="#fff" opacity="0.88"/><circle cx="2" cy="107" r="0.6" fill="#fff" opacity="0.85"/><circle cx="130" cy="1" r="0.6" fill="#fff" opacity="0.47"/><circle cx="587" cy="70" r="1.1" fill="#fff" opacity="0.65"/><circle cx="589" cy="59" r="0.8" fill="#fff" opacity="0.50"/><circle cx="490" cy="98" r="0.6" fill="#fff" opacity="0.49"/><circle cx="390" cy="134" r="0.6" fill="#fff" opacity="0.53"/><circle cx="437" cy="119" r="1.1" fill="#fff" opacity="0.53"/><circle cx="637" cy="140" r="0.6" fill="#fff" opacity="0.83"/><circle cx="258" cy="127" r="0.6" fill="#fff" opacity="0.71"/><circle cx="28" cy="51" r="1.1" fill="#fff" opacity="0.66"/><circle cx="362" cy="96" r="0.8" fill="#fff" opacity="0.45"/><circle cx="564" cy="51" r="0.6" fill="#fff" opacity="0.60"/><circle cx="631" cy="80" r="0.6" fill="#fff" opacity="0.59"/><circle cx="389" cy="0" r="0.6" fill="#fff" opacity="0.51"/><circle cx="284" cy="45" r="0.6" fill="#fff" opacity="0.55"/><circle cx="182" cy="72" r="0.6" fill="#fff" opacity="0.41"/><circle cx="500" cy="113" r="0.8" fill="#fff" opacity="0.57"/><circle cx="498" cy="79" r="0.6" fill="#fff" opacity="0.61"/><circle cx="148" cy="135" r="0.8" fill="#fff" opacity="0.65"/><circle cx="612" cy="78" r="0.6" fill="#fff" opacity="0.73"/><circle cx="109" cy="118" r="0.8" fill="#fff" opacity="0.41"/><circle cx="601" cy="113" r="0.8" fill="#fff" opacity="0.87"/><circle cx="631" cy="85" r="0.6" fill="#fff" opacity="0.42"/><circle cx="288" cy="110" r="0.8" fill="#fff" opacity="0.71"/><circle cx="619" cy="50" r="0.6" fill="#fff" opacity="0.64"/><circle cx="178" cy="135" r="1.1" fill="#fff" opacity="0.68"/><circle cx="445" cy="9" r="0.8" fill="#fff" opacity="0.47"/><circle cx="360" cy="111" r="1.1" fill="#fff" opacity="0.84"/><circle cx="108" cy="100" r="1.1" fill="#fff" opacity="0.84"/><circle cx="316" cy="14" r="0.6" fill="#fff" opacity="0.54"/><circle cx="82" cy="112" r="0.6" fill="#fff" opacity="0.48"/><circle cx="505" cy="120" r="0.6" fill="#fff" opacity="0.49"/><circle cx="292" cy="78" r="0.8" fill="#fff" opacity="0.44"/><circle cx="351" cy="83" r="0.8" fill="#fff" opacity="0.67"/><circle cx="602" cy="4" r="1.1" fill="#fff" opacity="0.84"/><circle cx="348" cy="73" r="1.1" fill="#fff" opacity="0.72"/><circle cx="510" cy="123" r="1.1" fill="#fff" opacity="0.67"/><circle cx="192" cy="101" r="1.1" fill="#fff" opacity="0.47"/><circle cx="64" cy="69" r="0.6" fill="#fff" opacity="0.65"/><circle cx="408" cy="7" r="1.1" fill="#fff" opacity="0.41"/><circle cx="156" cy="64" r="0.8" fill="#fff" opacity="0.81"/><circle cx="467" cy="87" r="0.6" fill="#fff" opacity="0.42"/><circle cx="382" cy="86" r="1.1" fill="#fff" opacity="0.60"/><circle cx="377" cy="11" r="0.6" fill="#fff" opacity="0.70"/><circle cx="116" cy="9" r="0.8" fill="#fff" opacity="0.71"/><circle cx="350" cy="66" r="1.1" fill="#fff" opacity="0.79"/><circle cx="214" cy="110" r="0.6" fill="#fff" opacity="0.63"/><circle cx="287" cy="21" r="0.8" fill="#fff" opacity="0.89"/><circle cx="533" cy="15" r="0.8" fill="#fff" opacity="0.74"/><circle cx="289" cy="18" r="0.6" fill="#fff" opacity="0.45"/><circle cx="34" cy="10" r="1.1" fill="#fff" opacity="0.89"/><circle cx="238" cy="104" r="0.8" fill="#fff" opacity="0.71"/><circle cx="128" cy="122" r="0.6" fill="#fff" opacity="0.52"/><circle cx="164" cy="72" r="0.6" fill="#fff" opacity="0.41"/><circle cx="162" cy="86" r="0.6" fill="#fff" opacity="0.66"/><circle cx="267" cy="126" r="0.8" fill="#fff" opacity="0.83"/><circle cx="387" cy="31" r="0.6" fill="#fff" opacity="0.74"/><circle cx="85" cy="5" r="0.6" fill="#fff" opacity="0.89"/><path d="M0 150 L120 128 L260 146 L380 120 L520 140 L640 126 L640 160 L0 160z" fill="#2a2d33"/><path d="M0 160 L640 160 L640 360 L0 360z" fill="#07080b"/><path d="M380 120 L520 140 L640 126 L640 132 L520 146 L380 126z" fill="#d7d9de" opacity=".85"/><circle cx="90" cy="112" r="9" fill="#5b8fd6"/><path d="M84 112 a6 6 0 0 0 12 0" fill="#1e3a5f"/><path d="M300 300 L190 200 L420 200z" fill="#fff9d6" opacity=".14"/><rect x="290" y="286" width="60" height="22" rx="4" fill="#e5e7eb"/><rect x="300" y="270" width="40" height="16" fill="#cbd5e1"/><circle cx="296" cy="310" r="7" fill="#374151"/><circle cx="344" cy="310" r="7" fill="#374151"/><circle cx="320" cy="310" r="7" fill="#374151"/><path d="M320 270 L96 116" stroke="#f87171" stroke-width="2" stroke-dasharray="6 5"/><rect x="16" y="16" width="200" height="96" rx="8" fill="#0d1526" fill-opacity="0.92" stroke="#f87171"/><text x="30" y="38" font-size="14" fill="#f87171" font-weight="700" text-anchor="start">NO SIGNAL</text><text x="30" y="56" font-size="10" fill="#9aa6c8" font-weight="400" text-anchor="start">Crater rim blocks Earth</text><text x="30" y="74" font-size="10" fill="#fbbf24" font-weight="400" text-anchor="start">Data on rover: 4.1 Gb (unsent)</text><text x="30" y="92" font-size="10" fill="#9aa6c8" font-weight="400" text-anchor="start">Signal back in ~3 h if moving</text><rect x="424" y="16" width="200" height="96" rx="8" fill="#0d1526" fill-opacity="0.92" stroke="rgba(140,170,255,.25)"/><text x="438" y="38" font-size="14" fill="#fbbf24" font-weight="700" text-anchor="start">Battery 23%</text><rect x="438" y="48" width="170" height="8" rx="4" fill="#22304d"/><rect x="438" y="48" width="39" height="8" rx="4" fill="#fbbf24"/><text x="438" y="74" font-size="10" fill="#9aa6c8" font-weight="400" text-anchor="start">In shadow · heaters on</text><text x="438" y="92" font-size="10" fill="#e8edff" font-weight="400" text-anchor="start">Safe haven 1.1 km away</text><rect x="220" y="326" width="200" height="24" rx="12" fill="#0d1526" fill-opacity="0.85" stroke="rgba(140,170,255,.25)"/><text x="320" y="342" font-size="10" fill="#e8edff" font-weight="600" text-anchor="middle">Hour 31 of plan  ·  10×</text></svg></div><figcaption><b>9. Shadowline: drive</b><span>The surprising failure: the rover finds ice, loses Earth behind the rim, and races its battery to sunlight.</span></figcaption></figure><figure class="shot"><div class="frame"><svg viewBox="0 0 640 360" role="img" aria-label="Debrief mock-up" font-family="Inter, system-ui, sans-serif"><rect width="640" height="360" fill="#0b1224"/><text x="40" y="96" font-size="64" fill="#fbbf24" font-weight="800" text-anchor="start">B</text><text x="110" y="62" font-size="16" fill="#fbbf24" font-weight="700" text-anchor="start">PARTIAL SUCCESS</text><text x="110" y="82" font-size="13" fill="#e8edff" font-weight="600" text-anchor="start">712 / 1000 points</text><text x="110" y="100" font-size="10" fill="#9aa6c8" font-weight="400" text-anchor="start">Ice found, but 58% of the data never reached Earth.</text><rect x="40" y="124" width="176" height="70" rx="8" fill="#0d1526" fill-opacity="0.92" stroke="rgba(140,170,255,.25)"/><rect x="40" y="124" width="4" height="70" rx="2" fill="#4ade80"/><text x="56" y="146" font-size="12" fill="#e8edff" font-weight="700" text-anchor="start">Power</text><text x="56" y="166" font-size="9" fill="#9aa6c8" font-weight="400" text-anchor="start">Battery covered the shadow trip.</text><rect x="230" y="124" width="176" height="70" rx="8" fill="#0d1526" fill-opacity="0.92" stroke="rgba(140,170,255,.25)"/><rect x="230" y="124" width="4" height="70" rx="2" fill="#f87171"/><text x="246" y="146" font-size="12" fill="#e8edff" font-weight="700" text-anchor="start">Comms</text><text x="246" y="166" font-size="9" fill="#9aa6c8" font-weight="400" text-anchor="start">Rim blocked Earth for 9 h; no relay.</text><rect x="420" y="124" width="176" height="70" rx="8" fill="#0d1526" fill-opacity="0.92" stroke="rgba(140,170,255,.25)"/><rect x="420" y="124" width="4" height="70" rx="2" fill="#4ade80"/><text x="436" y="146" font-size="12" fill="#e8edff" font-weight="700" text-anchor="start">Budget</text><text x="436" y="166" font-size="9" fill="#9aa6c8" font-weight="400" text-anchor="start">$22M left after a $9M overrun.</text><rect x="40" y="206" width="560" height="92" rx="8" fill="#0d1526" fill-opacity="0.92" stroke="rgba(140,170,255,.25)"/><text x="56" y="228" font-size="12" fill="#e8edff" font-weight="700" text-anchor="start">Your design vs a real NASA mission</text><text x="56" y="250" font-size="10" fill="#9aa6c8" font-weight="400" text-anchor="start">You</text><text x="140" y="250" font-size="10" fill="#e8edff" font-weight="400" text-anchor="start">868 kg · lunar polar · small rover · no relay</text><text x="56" y="270" font-size="10" fill="#9aa6c8" font-weight="400" text-anchor="start">LRO</text><text x="140" y="270" font-size="10" fill="#e8edff" font-weight="400" text-anchor="start">~1,900 kg · lunar polar ~50 km · laser altimeter + neutron</text><text x="56" y="288" font-size="9.5" fill="#5ad1ff" font-weight="400" text-anchor="start">Lesson: a polar orbit maps the whole Moon, including shadowed craters.</text><rect x="40" y="312" width="150" height="30" rx="7" fill="#5ad1ff"/><text x="115.0" y="331.0" font-size="10.5" fill="#001" font-weight="700" text-anchor="middle">Redesign</text><rect x="200" y="312" width="150" height="30" rx="7" fill="#22304d"/><text x="275.0" y="331.0" font-size="10.5" fill="#e8edff" font-weight="700" text-anchor="middle">Fly again</text><rect x="360" y="312" width="150" height="30" rx="7" fill="#22304d"/><text x="435.0" y="331.0" font-size="10.5" fill="#e8edff" font-weight="700" text-anchor="middle">Share design</text></svg></div><figcaption><b>10. Debrief (AI)</b><span>Grade, three "why" cards, an AI-written story of the flight, and a side-by-side with a real NASA mission.</span></figcaption></figure></div>
+</section>
+<!-- missions -->
+<section>
+  <div class="sec-head"><span class="num">04 · Missions</span><h2>The five levels</h2>
+  <p>Each mission stresses different resources, so players learn different trade-offs. Lunar Ice Prospector is the featured level with the Shadowline phase.</p></div>
+  <div class="missions"><article class="mission"><div class="frame"><svg viewBox="0 0 640 360" role="img" aria-label="Mission scene" font-family="Inter, system-ui, sans-serif"><rect width="640" height="360" fill="#03050c"/><circle cx="290" cy="202" r="0.8" fill="#fff" opacity="0.63"/><circle cx="547" cy="68" r="1.1" fill="#fff" opacity="0.64"/><circle cx="393" cy="67" r="0.8" fill="#fff" opacity="0.55"/><circle cx="58" cy="291" r="1.1" fill="#fff" opacity="0.72"/><circle cx="381" cy="143" r="0.8" fill="#fff" opacity="0.73"/><circle cx="394" cy="57" r="0.6" fill="#fff" opacity="0.82"/><circle cx="40" cy="13" r="0.6" fill="#fff" opacity="0.70"/><circle cx="498" cy="117" r="1.1" fill="#fff" opacity="0.82"/><circle cx="332" cy="231" r="0.8" fill="#fff" opacity="0.40"/><circle cx="54" cy="236" r="0.8" fill="#fff" opacity="0.90"/><circle cx="637" cy="302" r="1.1" fill="#fff" opacity="0.53"/><circle cx="485" cy="185" r="0.6" fill="#fff" opacity="0.44"/><circle cx="490" cy="144" r="0.8" fill="#fff" opacity="0.59"/><circle cx="613" cy="305" r="0.6" fill="#fff" opacity="0.51"/><circle cx="593" cy="19" r="0.8" fill="#fff" opacity="0.89"/><circle cx="254" cy="26" r="1.1" fill="#fff" opacity="0.50"/><circle cx="432" cy="121" r="0.8" fill="#fff" opacity="0.57"/><circle cx="617" cy="273" r="0.6" fill="#fff" opacity="0.47"/><circle cx="452" cy="4" r="0.8" fill="#fff" opacity="0.80"/><circle cx="114" cy="201" r="0.8" fill="#fff" opacity="0.65"/><circle cx="631" cy="277" r="0.8" fill="#fff" opacity="0.72"/><circle cx="75" cy="151" r="0.6" fill="#fff" opacity="0.40"/><circle cx="553" cy="351" r="1.1" fill="#fff" opacity="0.55"/><circle cx="566" cy="76" r="0.8" fill="#fff" opacity="0.90"/><circle cx="385" cy="208" r="0.6" fill="#fff" opacity="0.89"/><circle cx="136" cy="93" r="1.1" fill="#fff" opacity="0.56"/><circle cx="190" cy="26" r="0.6" fill="#fff" opacity="0.50"/><circle cx="407" cy="6" r="0.8" fill="#fff" opacity="0.59"/><circle cx="290" cy="345" r="0.8" fill="#fff" opacity="0.82"/><circle cx="87" cy="139" r="1.1" fill="#fff" opacity="0.48"/><circle cx="581" cy="294" r="0.6" fill="#fff" opacity="0.76"/><circle cx="101" cy="226" r="1.1" fill="#fff" opacity="0.50"/><circle cx="608" cy="318" r="1.1" fill="#fff" opacity="0.44"/><circle cx="30" cy="39" r="1.1" fill="#fff" opacity="0.88"/><circle cx="153" cy="254" r="0.8" fill="#fff" opacity="0.61"/><circle cx="579" cy="177" r="1.1" fill="#fff" opacity="0.49"/><circle cx="461" cy="25" r="0.6" fill="#fff" opacity="0.64"/><circle cx="418" cy="222" r="0.6" fill="#fff" opacity="0.54"/><circle cx="587" cy="73" r="0.6" fill="#fff" opacity="0.43"/><circle cx="263" cy="90" r="0.6" fill="#fff" opacity="0.49"/><circle cx="236" cy="206" r="0.6" fill="#fff" opacity="0.45"/><circle cx="89" cy="162" r="0.8" fill="#fff" opacity="0.73"/><circle cx="442" cy="210" r="0.6" fill="#fff" opacity="0.69"/><circle cx="591" cy="171" r="0.8" fill="#fff" opacity="0.75"/><circle cx="616" cy="8" r="1.1" fill="#fff" opacity="0.44"/><circle cx="43" cy="112" r="0.6" fill="#fff" opacity="0.90"/><circle cx="48" cy="197" r="1.1" fill="#fff" opacity="0.42"/><circle cx="599" cy="265" r="0.6" fill="#fff" opacity="0.80"/><circle cx="586" cy="127" r="1.1" fill="#fff" opacity="0.64"/><circle cx="50" cy="309" r="0.6" fill="#fff" opacity="0.83"/><circle cx="367" cy="225" r="0.8" fill="#fff" opacity="0.59"/><circle cx="8" cy="26" r="0.6" fill="#fff" opacity="0.72"/><circle cx="636" cy="317" r="1.1" fill="#fff" opacity="0.57"/><circle cx="598" cy="250" r="0.8" fill="#fff" opacity="0.62"/><circle cx="537" cy="30" r="1.1" fill="#fff" opacity="0.41"/><circle cx="385" cy="173" r="0.6" fill="#fff" opacity="0.88"/><circle cx="72" cy="281" r="1.1" fill="#fff" opacity="0.86"/><circle cx="164" cy="4" r="0.8" fill="#fff" opacity="0.47"/><circle cx="392" cy="187" r="0.8" fill="#fff" opacity="0.73"/><circle cx="283" cy="321" r="0.8" fill="#fff" opacity="0.60"/><circle cx="160" cy="228" r="0.6" fill="#fff" opacity="0.84"/><circle cx="246" cy="210" r="0.8" fill="#fff" opacity="0.50"/><circle cx="86" cy="126" r="0.6" fill="#fff" opacity="0.76"/><circle cx="608" cy="100" r="0.6" fill="#fff" opacity="0.46"/><circle cx="302" cy="333" r="0.8" fill="#fff" opacity="0.59"/><circle cx="333" cy="242" r="1.1" fill="#fff" opacity="0.82"/><circle cx="629" cy="163" r="0.6" fill="#fff" opacity="0.81"/><circle cx="178" cy="219" r="1.1" fill="#fff" opacity="0.75"/><circle cx="365" cy="111" r="1.1" fill="#fff" opacity="0.41"/><circle cx="87" cy="164" r="0.6" fill="#fff" opacity="0.78"/><circle cx="320" cy="420" r="300" fill="#1f5fa8"/><path d="M120 250 q60 -50 140 -20 q60 30 120 -10 q70 -40 150 10 L560 360 L100 360z" fill="#4c8a3d"/><path d="M220 230 q40 -14 80 6" stroke="#b7a06a" stroke-width="10" fill="none"/><circle cx="250" cy="236" r="10" fill="#f97316" opacity=".5"/><circle cx="250" cy="236" r="4" fill="#ffd27a"/><circle cx="300" cy="250" r="10" fill="#f97316" opacity=".5"/><circle cx="300" cy="250" r="4" fill="#ffd27a"/><circle cx="420" cy="232" r="10" fill="#f97316" opacity=".5"/><circle cx="420" cy="232" r="4" fill="#ffd27a"/><path d="M60 140 Q320 40 580 140" stroke="#5ad1ff" stroke-dasharray="4 5" fill="none"/><rect x="430" y="76" width="14" height="10" fill="#d4a017"/><rect x="412" y="78" width="16" height="6" fill="#1e3a8a"/><rect x="446" y="78" width="16" height="6" fill="#1e3a8a"/><path d="M437 86 L420 230 L456 230z" fill="#f97316" opacity=".15"/></svg></div><div class="mbody"><span class="lvl">Level 1 · Easy · $180M · 3 years</span><h3>Wildfire Watch</h3><p>Spot wildfires early from orbit and map burn scars.</p><dl><dt>Best orbit</dt><dd>Sun-synchronous orbit</dd><dt>Key gear</dt><dd>Thermal infrared, hyperspectral</dd><dt>Critical</dt><dd class="crit">Data + comms: hot spots make lots of images every day</dd><dt>Real NASA</dt><dd>Landsat 8, Terra (MODIS)</dd></dl></div></article><article class="mission"><div class="frame"><svg viewBox="0 0 640 360" role="img" aria-label="Mission scene" font-family="Inter, system-ui, sans-serif"><rect width="640" height="360" fill="#03050c"/><circle cx="304" cy="237" r="1.1" fill="#fff" opacity="0.57"/><circle cx="244" cy="359" r="0.8" fill="#fff" opacity="0.54"/><circle cx="519" cy="249" r="1.1" fill="#fff" opacity="0.51"/><circle cx="1" cy="225" r="0.8" fill="#fff" opacity="0.58"/><circle cx="217" cy="76" r="1.1" fill="#fff" opacity="0.81"/><circle cx="48" cy="247" r="0.8" fill="#fff" opacity="0.74"/><circle cx="511" cy="31" r="0.6" fill="#fff" opacity="0.81"/><circle cx="424" cy="80" r="0.8" fill="#fff" opacity="0.87"/><circle cx="72" cy="152" r="0.6" fill="#fff" opacity="0.67"/><circle cx="564" cy="201" r="1.1" fill="#fff" opacity="0.84"/><circle cx="355" cy="183" r="0.6" fill="#fff" opacity="0.60"/><circle cx="268" cy="215" r="0.8" fill="#fff" opacity="0.70"/><circle cx="346" cy="231" r="0.6" fill="#fff" opacity="0.88"/><circle cx="625" cy="239" r="0.8" fill="#fff" opacity="0.87"/><circle cx="554" cy="139" r="0.8" fill="#fff" opacity="0.46"/><circle cx="150" cy="131" r="1.1" fill="#fff" opacity="0.69"/><circle cx="490" cy="65" r="0.8" fill="#fff" opacity="0.81"/><circle cx="275" cy="187" r="0.6" fill="#fff" opacity="0.74"/><circle cx="28" cy="74" r="1.1" fill="#fff" opacity="0.45"/><circle cx="352" cy="64" r="1.1" fill="#fff" opacity="0.54"/><circle cx="277" cy="179" r="1.1" fill="#fff" opacity="0.72"/><circle cx="33" cy="165" r="0.6" fill="#fff" opacity="0.57"/><circle cx="292" cy="251" r="0.8" fill="#fff" opacity="0.52"/><circle cx="633" cy="167" r="1.1" fill="#fff" opacity="0.58"/><circle cx="121" cy="269" r="1.1" fill="#fff" opacity="0.40"/><circle cx="172" cy="277" r="0.8" fill="#fff" opacity="0.49"/><circle cx="509" cy="181" r="0.6" fill="#fff" opacity="0.71"/><circle cx="630" cy="359" r="1.1" fill="#fff" opacity="0.48"/><circle cx="594" cy="318" r="1.1" fill="#fff" opacity="0.82"/><circle cx="409" cy="83" r="1.1" fill="#fff" opacity="0.65"/><circle cx="313" cy="127" r="1.1" fill="#fff" opacity="0.87"/><circle cx="572" cy="58" r="0.8" fill="#fff" opacity="0.71"/><circle cx="29" cy="119" r="1.1" fill="#fff" opacity="0.72"/><circle cx="285" cy="285" r="1.1" fill="#fff" opacity="0.54"/><circle cx="163" cy="246" r="1.1" fill="#fff" opacity="0.41"/><circle cx="357" cy="96" r="0.6" fill="#fff" opacity="0.52"/><circle cx="279" cy="353" r="1.1" fill="#fff" opacity="0.69"/><circle cx="460" cy="337" r="0.8" fill="#fff" opacity="0.78"/><circle cx="267" cy="212" r="0.8" fill="#fff" opacity="0.79"/><circle cx="371" cy="125" r="0.8" fill="#fff" opacity="0.72"/><circle cx="246" cy="58" r="1.1" fill="#fff" opacity="0.76"/><circle cx="578" cy="287" r="0.6" fill="#fff" opacity="0.86"/><circle cx="342" cy="284" r="0.8" fill="#fff" opacity="0.80"/><circle cx="455" cy="68" r="0.8" fill="#fff" opacity="0.87"/><circle cx="441" cy="195" r="1.1" fill="#fff" opacity="0.71"/><circle cx="136" cy="216" r="1.1" fill="#fff" opacity="0.60"/><circle cx="157" cy="146" r="0.8" fill="#fff" opacity="0.44"/><circle cx="213" cy="247" r="1.1" fill="#fff" opacity="0.56"/><circle cx="445" cy="273" r="1.1" fill="#fff" opacity="0.72"/><circle cx="279" cy="63" r="0.6" fill="#fff" opacity="0.64"/><circle cx="284" cy="65" r="1.1" fill="#fff" opacity="0.70"/><circle cx="292" cy="318" r="0.6" fill="#fff" opacity="0.87"/><circle cx="5" cy="130" r="0.8" fill="#fff" opacity="0.82"/><circle cx="441" cy="107" r="1.1" fill="#fff" opacity="0.86"/><circle cx="321" cy="251" r="0.6" fill="#fff" opacity="0.65"/><circle cx="249" cy="180" r="1.1" fill="#fff" opacity="0.52"/><circle cx="294" cy="308" r="0.6" fill="#fff" opacity="0.60"/><circle cx="447" cy="285" r="1.1" fill="#fff" opacity="0.74"/><circle cx="424" cy="350" r="1.1" fill="#fff" opacity="0.69"/><circle cx="200" cy="274" r="0.6" fill="#fff" opacity="0.56"/><circle cx="320" cy="130" r="0.8" fill="#fff" opacity="0.49"/><circle cx="305" cy="288" r="0.6" fill="#fff" opacity="0.53"/><circle cx="29" cy="289" r="0.8" fill="#fff" opacity="0.60"/><circle cx="402" cy="102" r="1.1" fill="#fff" opacity="0.56"/><circle cx="81" cy="231" r="1.1" fill="#fff" opacity="0.70"/><circle cx="502" cy="148" r="1.1" fill="#fff" opacity="0.73"/><circle cx="217" cy="277" r="0.8" fill="#fff" opacity="0.59"/><circle cx="256" cy="291" r="0.6" fill="#fff" opacity="0.79"/><circle cx="535" cy="39" r="0.8" fill="#fff" opacity="0.66"/><circle cx="34" cy="301" r="1.1" fill="#fff" opacity="0.81"/><circle cx="70" cy="180" r="70" fill="#ffd36b"/><circle cx="70" cy="180" r="100" fill="#ffd36b" opacity=".15"/><path d="M150 120 q120 14 330 0" stroke="#ffb347" stroke-opacity=".35" fill="none"/><path d="M150 150 q120 -14 330 0" stroke="#ffb347" stroke-opacity=".35" fill="none"/><path d="M150 180 q120 14 330 0" stroke="#ffb347" stroke-opacity=".35" fill="none"/><path d="M150 210 q120 -14 330 0" stroke="#ffb347" stroke-opacity=".35" fill="none"/><path d="M150 240 q120 14 330 0" stroke="#ffb347" stroke-opacity=".35" fill="none"/><circle cx="580" cy="180" r="24" fill="#1f5fa8"/><path d="M566 172 q10 -6 22 2" stroke="#4c8a3d" stroke-width="5" fill="none"/><rect x="400" y="170" width="16" height="16" fill="#d4a017"/><rect x="380" y="174" width="18" height="8" fill="#1e3a8a"/><rect x="418" y="174" width="18" height="8" fill="#1e3a8a"/><text x="408" y="212" font-size="13" fill="#e8edff" font-weight="700" text-anchor="middle">L1</text><text x="408" y="228" font-size="9.5" fill="#9aa6c8" font-weight="400" text-anchor="middle">1.5 million km</text></svg></div><div class="mbody"><span class="lvl">Level 2 · Medium · $300M · 5 years</span><h3>Space Weather Sentinel</h3><p>Warn Earth about solar storms from the L1 point.</p><dl><dt>Best orbit</dt><dd>Sun–Earth L1</dd><dt>Key gear</dt><dd>Coronagraph, particle detector, magnetometer</dd><dt>Critical</dt><dd class="crit">Comms at 1.5 million km + a 5-year lifetime</dd><dt>Real NASA</dt><dd>SOHO, ACE, DSCOVR</dd></dl></div></article><article class="mission"><div class="frame"><svg viewBox="0 0 640 360" role="img" aria-label="Mission scene" font-family="Inter, system-ui, sans-serif"><rect width="640" height="360" fill="#03050c"/><circle cx="166" cy="247" r="1.1" fill="#fff" opacity="0.80"/><circle cx="570" cy="235" r="1.1" fill="#fff" opacity="0.47"/><circle cx="144" cy="264" r="0.6" fill="#fff" opacity="0.44"/><circle cx="541" cy="268" r="0.6" fill="#fff" opacity="0.62"/><circle cx="536" cy="219" r="0.6" fill="#fff" opacity="0.90"/><circle cx="534" cy="31" r="0.8" fill="#fff" opacity="0.81"/><circle cx="477" cy="342" r="0.8" fill="#fff" opacity="0.58"/><circle cx="150" cy="323" r="1.1" fill="#fff" opacity="0.68"/><circle cx="275" cy="131" r="0.8" fill="#fff" opacity="0.72"/><circle cx="419" cy="125" r="1.1" fill="#fff" opacity="0.80"/><circle cx="631" cy="249" r="1.1" fill="#fff" opacity="0.71"/><circle cx="632" cy="159" r="1.1" fill="#fff" opacity="0.62"/><circle cx="113" cy="73" r="1.1" fill="#fff" opacity="0.58"/><circle cx="238" cy="94" r="0.8" fill="#fff" opacity="0.60"/><circle cx="84" cy="177" r="0.6" fill="#fff" opacity="0.68"/><circle cx="567" cy="253" r="0.6" fill="#fff" opacity="0.44"/><circle cx="417" cy="343" r="0.8" fill="#fff" opacity="0.40"/><circle cx="272" cy="312" r="0.6" fill="#fff" opacity="0.47"/><circle cx="516" cy="302" r="1.1" fill="#fff" opacity="0.53"/><circle cx="469" cy="265" r="0.8" fill="#fff" opacity="0.84"/><circle cx="514" cy="73" r="1.1" fill="#fff" opacity="0.59"/><circle cx="459" cy="49" r="1.1" fill="#fff" opacity="0.70"/><circle cx="463" cy="76" r="1.1" fill="#fff" opacity="0.42"/><circle cx="449" cy="14" r="1.1" fill="#fff" opacity="0.76"/><circle cx="218" cy="106" r="0.6" fill="#fff" opacity="0.79"/><circle cx="355" cy="324" r="0.6" fill="#fff" opacity="0.43"/><circle cx="412" cy="200" r="1.1" fill="#fff" opacity="0.75"/><circle cx="622" cy="297" r="1.1" fill="#fff" opacity="0.45"/><circle cx="2" cy="359" r="0.6" fill="#fff" opacity="0.60"/><circle cx="580" cy="203" r="1.1" fill="#fff" opacity="0.44"/><circle cx="301" cy="132" r="0.6" fill="#fff" opacity="0.40"/><circle cx="214" cy="179" r="1.1" fill="#fff" opacity="0.66"/><circle cx="304" cy="241" r="0.8" fill="#fff" opacity="0.80"/><circle cx="241" cy="257" r="0.6" fill="#fff" opacity="0.77"/><circle cx="165" cy="246" r="0.6" fill="#fff" opacity="0.53"/><circle cx="376" cy="128" r="0.6" fill="#fff" opacity="0.70"/><circle cx="274" cy="231" r="0.8" fill="#fff" opacity="0.42"/><circle cx="254" cy="31" r="0.6" fill="#fff" opacity="0.70"/><circle cx="3" cy="279" r="0.6" fill="#fff" opacity="0.62"/><circle cx="635" cy="140" r="0.6" fill="#fff" opacity="0.54"/><circle cx="278" cy="49" r="0.6" fill="#fff" opacity="0.46"/><circle cx="527" cy="79" r="0.8" fill="#fff" opacity="0.70"/><circle cx="186" cy="125" r="0.6" fill="#fff" opacity="0.58"/><circle cx="283" cy="316" r="0.8" fill="#fff" opacity="0.42"/><circle cx="342" cy="47" r="0.6" fill="#fff" opacity="0.56"/><circle cx="571" cy="196" r="0.6" fill="#fff" opacity="0.85"/><circle cx="573" cy="328" r="1.1" fill="#fff" opacity="0.47"/><circle cx="307" cy="134" r="0.8" fill="#fff" opacity="0.53"/><circle cx="526" cy="17" r="0.6" fill="#fff" opacity="0.73"/><circle cx="599" cy="187" r="0.8" fill="#fff" opacity="0.50"/><circle cx="252" cy="20" r="1.1" fill="#fff" opacity="0.85"/><circle cx="74" cy="49" r="1.1" fill="#fff" opacity="0.78"/><circle cx="237" cy="143" r="0.6" fill="#fff" opacity="0.88"/><circle cx="191" cy="31" r="0.6" fill="#fff" opacity="0.87"/><circle cx="107" cy="6" r="1.1" fill="#fff" opacity="0.76"/><circle cx="554" cy="360" r="1.1" fill="#fff" opacity="0.61"/><circle cx="398" cy="300" r="1.1" fill="#fff" opacity="0.75"/><circle cx="588" cy="15" r="0.6" fill="#fff" opacity="0.55"/><circle cx="638" cy="170" r="0.8" fill="#fff" opacity="0.48"/><circle cx="96" cy="108" r="1.1" fill="#fff" opacity="0.41"/><circle cx="166" cy="120" r="0.6" fill="#fff" opacity="0.88"/><circle cx="610" cy="135" r="0.6" fill="#fff" opacity="0.90"/><circle cx="488" cy="174" r="0.8" fill="#fff" opacity="0.48"/><circle cx="370" cy="345" r="0.8" fill="#fff" opacity="0.50"/><circle cx="240" cy="171" r="0.6" fill="#fff" opacity="0.41"/><circle cx="580" cy="173" r="1.1" fill="#fff" opacity="0.49"/><circle cx="66" cy="212" r="0.8" fill="#fff" opacity="0.44"/><circle cx="578" cy="206" r="1.1" fill="#fff" opacity="0.82"/><circle cx="137" cy="268" r="1.1" fill="#fff" opacity="0.75"/><circle cx="17" cy="191" r="1.1" fill="#fff" opacity="0.47"/><circle cx="320" cy="400" r="260" fill="#a5a8b0"/><ellipse cx="320" cy="182" rx="120" ry="34" fill="#1a1c22"/><ellipse cx="320" cy="180" rx="70" ry="18" fill="#06070a"/><ellipse cx="330" cy="184" rx="40" ry="9" fill="#22d3ee" opacity=".25"/><path d="M200 182 a120 34 0 0 1 240 0" fill="none" stroke="#e4e6ea" stroke-width="3"/><circle cx="560" cy="90" r="16" fill="#1f5fa8"/><path d="M552 86 q8 -4 16 2" stroke="#4c8a3d" stroke-width="4" fill="none"/><path d="M60 60 Q320 10 600 60" stroke="#5ad1ff" stroke-dasharray="4 5" fill="none"/><rect x="250" y="36" width="12" height="9" fill="#d4a017"/><rect x="380" y="166" width="16" height="9" rx="2" fill="#e5e7eb"/><path d="M396 170 L420 160 L420 180z" fill="#fff9d6" opacity=".3"/></svg></div><div class="mbody"><span class="lvl">Level 3 · Medium · $320M · 2 years + Shadowline</span><h3>Lunar Ice Prospector</h3><p>Map polar ice from orbit, then send a rover into a dark crater.</p><dl><dt>Best orbit</dt><dd>Lunar polar orbit + surface</dd><dt>Key gear</dt><dd>Neutron spectrometer, laser altimeter, rover</dd><dt>Critical</dt><dd class="crit">Battery in shadow + radio blocked by crater rims</dd><dt>Real NASA</dt><dd>LRO, Lunar Prospector, VIPER</dd></dl></div></article><article class="mission"><div class="frame"><svg viewBox="0 0 640 360" role="img" aria-label="Mission scene" font-family="Inter, system-ui, sans-serif"><rect width="640" height="360" fill="#03050c"/><circle cx="68" cy="253" r="1.1" fill="#fff" opacity="0.66"/><circle cx="158" cy="265" r="0.8" fill="#fff" opacity="0.77"/><circle cx="421" cy="109" r="1.1" fill="#fff" opacity="0.84"/><circle cx="252" cy="327" r="0.8" fill="#fff" opacity="0.51"/><circle cx="577" cy="129" r="0.8" fill="#fff" opacity="0.58"/><circle cx="405" cy="186" r="0.6" fill="#fff" opacity="0.68"/><circle cx="425" cy="59" r="1.1" fill="#fff" opacity="0.43"/><circle cx="381" cy="10" r="0.8" fill="#fff" opacity="0.50"/><circle cx="626" cy="145" r="0.8" fill="#fff" opacity="0.85"/><circle cx="60" cy="231" r="0.6" fill="#fff" opacity="0.69"/><circle cx="408" cy="131" r="0.6" fill="#fff" opacity="0.77"/><circle cx="311" cy="242" r="0.8" fill="#fff" opacity="0.63"/><circle cx="140" cy="287" r="1.1" fill="#fff" opacity="0.53"/><circle cx="78" cy="360" r="0.8" fill="#fff" opacity="0.54"/><circle cx="18" cy="267" r="0.6" fill="#fff" opacity="0.74"/><circle cx="375" cy="153" r="1.1" fill="#fff" opacity="0.48"/><circle cx="247" cy="111" r="0.8" fill="#fff" opacity="0.62"/><circle cx="381" cy="34" r="0.8" fill="#fff" opacity="0.60"/><circle cx="288" cy="222" r="0.8" fill="#fff" opacity="0.43"/><circle cx="92" cy="253" r="1.1" fill="#fff" opacity="0.62"/><circle cx="528" cy="146" r="0.8" fill="#fff" opacity="0.41"/><circle cx="454" cy="132" r="0.8" fill="#fff" opacity="0.53"/><circle cx="193" cy="68" r="1.1" fill="#fff" opacity="0.68"/><circle cx="511" cy="34" r="0.6" fill="#fff" opacity="0.42"/><circle cx="200" cy="354" r="1.1" fill="#fff" opacity="0.65"/><circle cx="334" cy="290" r="0.8" fill="#fff" opacity="0.46"/><circle cx="612" cy="279" r="0.6" fill="#fff" opacity="0.52"/><circle cx="559" cy="95" r="0.6" fill="#fff" opacity="0.50"/><circle cx="435" cy="120" r="1.1" fill="#fff" opacity="0.78"/><circle cx="236" cy="202" r="1.1" fill="#fff" opacity="0.77"/><circle cx="504" cy="57" r="1.1" fill="#fff" opacity="0.82"/><circle cx="235" cy="138" r="0.8" fill="#fff" opacity="0.67"/><circle cx="495" cy="113" r="1.1" fill="#fff" opacity="0.42"/><circle cx="412" cy="155" r="0.8" fill="#fff" opacity="0.44"/><circle cx="517" cy="47" r="0.6" fill="#fff" opacity="0.75"/><circle cx="90" cy="93" r="0.8" fill="#fff" opacity="0.46"/><circle cx="574" cy="18" r="0.6" fill="#fff" opacity="0.53"/><circle cx="236" cy="153" r="0.6" fill="#fff" opacity="0.62"/><circle cx="58" cy="291" r="0.6" fill="#fff" opacity="0.47"/><circle cx="428" cy="80" r="1.1" fill="#fff" opacity="0.83"/><circle cx="525" cy="358" r="1.1" fill="#fff" opacity="0.73"/><circle cx="357" cy="17" r="0.8" fill="#fff" opacity="0.63"/><circle cx="614" cy="116" r="0.6" fill="#fff" opacity="0.83"/><circle cx="40" cy="245" r="1.1" fill="#fff" opacity="0.67"/><circle cx="62" cy="312" r="0.8" fill="#fff" opacity="0.82"/><circle cx="74" cy="19" r="1.1" fill="#fff" opacity="0.87"/><circle cx="44" cy="286" r="0.8" fill="#fff" opacity="0.42"/><circle cx="630" cy="319" r="0.6" fill="#fff" opacity="0.40"/><circle cx="288" cy="282" r="0.8" fill="#fff" opacity="0.76"/><circle cx="13" cy="29" r="0.8" fill="#fff" opacity="0.52"/><circle cx="436" cy="233" r="0.6" fill="#fff" opacity="0.67"/><circle cx="510" cy="261" r="0.6" fill="#fff" opacity="0.86"/><circle cx="577" cy="308" r="0.8" fill="#fff" opacity="0.59"/><circle cx="188" cy="261" r="0.8" fill="#fff" opacity="0.41"/><circle cx="88" cy="344" r="1.1" fill="#fff" opacity="0.56"/><circle cx="138" cy="210" r="0.8" fill="#fff" opacity="0.41"/><circle cx="413" cy="360" r="0.8" fill="#fff" opacity="0.69"/><circle cx="508" cy="152" r="1.1" fill="#fff" opacity="0.78"/><circle cx="625" cy="350" r="0.6" fill="#fff" opacity="0.59"/><circle cx="458" cy="88" r="1.1" fill="#fff" opacity="0.89"/><circle cx="487" cy="298" r="0.6" fill="#fff" opacity="0.53"/><circle cx="550" cy="89" r="0.6" fill="#fff" opacity="0.63"/><circle cx="424" cy="18" r="0.6" fill="#fff" opacity="0.74"/><circle cx="439" cy="234" r="0.8" fill="#fff" opacity="0.63"/><circle cx="576" cy="25" r="0.6" fill="#fff" opacity="0.75"/><circle cx="118" cy="134" r="1.1" fill="#fff" opacity="0.50"/><circle cx="69" cy="131" r="0.6" fill="#fff" opacity="0.78"/><circle cx="223" cy="179" r="0.8" fill="#fff" opacity="0.42"/><circle cx="390" cy="166" r="0.8" fill="#fff" opacity="0.64"/><circle cx="195" cy="17" r="0.6" fill="#fff" opacity="0.66"/><circle cx="320" cy="210" r="120" fill="#c1440e"/><path d="M220 160 q60 30 200 0 q-20 60 -100 70 q-80 -10 -100 -70z" fill="#e8a070" opacity=".55"/><ellipse cx="320" cy="96" rx="40" ry="10" fill="#f1f1f1"/><circle cx="280" cy="230" r="14" fill="#8a2f0a"/><ellipse cx="320" cy="210" rx="150" ry="150" fill="none" stroke="#5ad1ff" stroke-dasharray="4 5" stroke-opacity=".6"/><rect x="458" y="150" width="12" height="9" fill="#d4a017"/><circle cx="600" cy="40" r="6" fill="#1f5fa8"/><path d="M464 150 L596 44" stroke="#4ade80" stroke-dasharray="3 6"/><text x="560" y="80" font-size="9" fill="#9aa6c8" font-weight="400" text-anchor="middle">22 min delay</text></svg></div><div class="mbody"><span class="lvl">Level 4 · Hard · $420M · 3 years</span><h3>Mars Climate Orbiter</h3><p>Study dust storms and ice caps from Mars orbit.</p><dl><dt>Best orbit</dt><dd>Mars science orbit</dd><dt>Key gear</dt><dd>Thermal infrared, hyperspectral</dd><dt>Critical</dt><dd class="crit">Power (43% sunlight), Δv to brake into orbit, slow comms</dd><dt>Real NASA</dt><dd>MRO, MAVEN, Mars Odyssey</dd></dl></div></article><article class="mission"><div class="frame"><svg viewBox="0 0 640 360" role="img" aria-label="Mission scene" font-family="Inter, system-ui, sans-serif"><rect width="640" height="360" fill="#03050c"/><circle cx="618" cy="4" r="1.1" fill="#fff" opacity="0.42"/><circle cx="584" cy="86" r="0.6" fill="#fff" opacity="0.84"/><circle cx="436" cy="309" r="0.8" fill="#fff" opacity="0.52"/><circle cx="216" cy="255" r="0.8" fill="#fff" opacity="0.60"/><circle cx="220" cy="337" r="0.6" fill="#fff" opacity="0.84"/><circle cx="510" cy="80" r="1.1" fill="#fff" opacity="0.66"/><circle cx="148" cy="164" r="0.8" fill="#fff" opacity="0.64"/><circle cx="295" cy="288" r="0.8" fill="#fff" opacity="0.68"/><circle cx="595" cy="232" r="0.8" fill="#fff" opacity="0.79"/><circle cx="518" cy="24" r="0.6" fill="#fff" opacity="0.50"/><circle cx="342" cy="221" r="1.1" fill="#fff" opacity="0.82"/><circle cx="11" cy="191" r="0.6" fill="#fff" opacity="0.84"/><circle cx="64" cy="42" r="0.6" fill="#fff" opacity="0.44"/><circle cx="464" cy="332" r="0.8" fill="#fff" opacity="0.60"/><circle cx="321" cy="65" r="1.1" fill="#fff" opacity="0.58"/><circle cx="151" cy="112" r="1.1" fill="#fff" opacity="0.56"/><circle cx="579" cy="121" r="0.8" fill="#fff" opacity="0.79"/><circle cx="485" cy="302" r="0.8" fill="#fff" opacity="0.64"/><circle cx="74" cy="177" r="0.8" fill="#fff" opacity="0.41"/><circle cx="166" cy="348" r="0.6" fill="#fff" opacity="0.54"/><circle cx="26" cy="322" r="0.8" fill="#fff" opacity="0.48"/><circle cx="320" cy="173" r="0.8" fill="#fff" opacity="0.42"/><circle cx="39" cy="304" r="1.1" fill="#fff" opacity="0.88"/><circle cx="148" cy="272" r="0.8" fill="#fff" opacity="0.75"/><circle cx="164" cy="31" r="0.6" fill="#fff" opacity="0.43"/><circle cx="482" cy="301" r="0.8" fill="#fff" opacity="0.57"/><circle cx="396" cy="254" r="1.1" fill="#fff" opacity="0.62"/><circle cx="351" cy="11" r="0.8" fill="#fff" opacity="0.85"/><circle cx="571" cy="5" r="1.1" fill="#fff" opacity="0.86"/><circle cx="395" cy="327" r="0.6" fill="#fff" opacity="0.47"/><circle cx="160" cy="355" r="0.8" fill="#fff" opacity="0.56"/><circle cx="156" cy="211" r="0.8" fill="#fff" opacity="0.56"/><circle cx="387" cy="253" r="0.8" fill="#fff" opacity="0.86"/><circle cx="547" cy="231" r="1.1" fill="#fff" opacity="0.76"/><circle cx="69" cy="301" r="1.1" fill="#fff" opacity="0.60"/><circle cx="560" cy="309" r="0.8" fill="#fff" opacity="0.45"/><circle cx="220" cy="266" r="1.1" fill="#fff" opacity="0.71"/><circle cx="366" cy="44" r="1.1" fill="#fff" opacity="0.40"/><circle cx="501" cy="56" r="1.1" fill="#fff" opacity="0.63"/><circle cx="102" cy="71" r="1.1" fill="#fff" opacity="0.68"/><circle cx="481" cy="133" r="0.6" fill="#fff" opacity="0.89"/><circle cx="414" cy="226" r="1.1" fill="#fff" opacity="0.76"/><circle cx="376" cy="299" r="1.1" fill="#fff" opacity="0.79"/><circle cx="217" cy="312" r="1.1" fill="#fff" opacity="0.73"/><circle cx="261" cy="98" r="0.6" fill="#fff" opacity="0.78"/><circle cx="229" cy="67" r="0.8" fill="#fff" opacity="0.86"/><circle cx="446" cy="282" r="0.6" fill="#fff" opacity="0.43"/><circle cx="161" cy="268" r="0.6" fill="#fff" opacity="0.80"/><circle cx="462" cy="193" r="0.6" fill="#fff" opacity="0.56"/><circle cx="393" cy="316" r="0.8" fill="#fff" opacity="0.61"/><circle cx="269" cy="316" r="0.8" fill="#fff" opacity="0.78"/><circle cx="94" cy="62" r="0.8" fill="#fff" opacity="0.86"/><circle cx="299" cy="62" r="0.6" fill="#fff" opacity="0.61"/><circle cx="592" cy="352" r="0.6" fill="#fff" opacity="0.73"/><circle cx="626" cy="163" r="0.8" fill="#fff" opacity="0.85"/><circle cx="108" cy="241" r="0.6" fill="#fff" opacity="0.71"/><circle cx="294" cy="11" r="0.8" fill="#fff" opacity="0.84"/><circle cx="382" cy="94" r="0.8" fill="#fff" opacity="0.80"/><circle cx="259" cy="229" r="0.6" fill="#fff" opacity="0.48"/><circle cx="610" cy="162" r="0.8" fill="#fff" opacity="0.57"/><circle cx="454" cy="169" r="0.6" fill="#fff" opacity="0.51"/><circle cx="141" cy="274" r="1.1" fill="#fff" opacity="0.60"/><circle cx="70" cy="144" r="0.8" fill="#fff" opacity="0.56"/><circle cx="552" cy="162" r="0.6" fill="#fff" opacity="0.87"/><circle cx="173" cy="149" r="0.8" fill="#fff" opacity="0.84"/><circle cx="441" cy="97" r="1.1" fill="#fff" opacity="0.53"/><circle cx="186" cy="162" r="1.1" fill="#fff" opacity="0.52"/><circle cx="96" cy="342" r="0.6" fill="#fff" opacity="0.73"/><circle cx="507" cy="142" r="0.8" fill="#fff" opacity="0.51"/><circle cx="184" cy="147" r="1.1" fill="#fff" opacity="0.63"/><path d="M0 0 V360" stroke="#5ad1ff" stroke-opacity=".08"/><path d="M40 0 V360" stroke="#5ad1ff" stroke-opacity=".08"/><path d="M80 0 V360" stroke="#5ad1ff" stroke-opacity=".08"/><path d="M120 0 V360" stroke="#5ad1ff" stroke-opacity=".08"/><path d="M160 0 V360" stroke="#5ad1ff" stroke-opacity=".08"/><path d="M200 0 V360" stroke="#5ad1ff" stroke-opacity=".08"/><path d="M240 0 V360" stroke="#5ad1ff" stroke-opacity=".08"/><path d="M280 0 V360" stroke="#5ad1ff" stroke-opacity=".08"/><path d="M320 0 V360" stroke="#5ad1ff" stroke-opacity=".08"/><path d="M360 0 V360" stroke="#5ad1ff" stroke-opacity=".08"/><path d="M400 0 V360" stroke="#5ad1ff" stroke-opacity=".08"/><path d="M440 0 V360" stroke="#5ad1ff" stroke-opacity=".08"/><path d="M480 0 V360" stroke="#5ad1ff" stroke-opacity=".08"/><path d="M520 0 V360" stroke="#5ad1ff" stroke-opacity=".08"/><path d="M560 0 V360" stroke="#5ad1ff" stroke-opacity=".08"/><path d="M600 0 V360" stroke="#5ad1ff" stroke-opacity=".08"/><path d="M0 0 H640" stroke="#5ad1ff" stroke-opacity=".08"/><path d="M0 40 H640" stroke="#5ad1ff" stroke-opacity=".08"/><path d="M0 80 H640" stroke="#5ad1ff" stroke-opacity=".08"/><path d="M0 120 H640" stroke="#5ad1ff" stroke-opacity=".08"/><path d="M0 160 H640" stroke="#5ad1ff" stroke-opacity=".08"/><path d="M0 200 H640" stroke="#5ad1ff" stroke-opacity=".08"/><path d="M0 240 H640" stroke="#5ad1ff" stroke-opacity=".08"/><path d="M0 280 H640" stroke="#5ad1ff" stroke-opacity=".08"/><path d="M0 320 H640" stroke="#5ad1ff" stroke-opacity=".08"/><circle cx="200" cy="200" r="60" fill="#1f5fa8"/><circle cx="440" cy="150" r="36" fill="#a5a8b0"/><circle cx="530" cy="270" r="30" fill="#c1440e"/><rect x="300" y="240" width="16" height="12" fill="#d4a017"/><rect x="280" y="243" width="18" height="6" fill="#1e3a8a"/><rect x="318" y="243" width="18" height="6" fill="#1e3a8a"/></svg></div><div class="mbody"><span class="lvl">Level 5 · Free play · $2,000M</span><h3>Sandbox</h3><p>No objective. Experiment with any orbit, part and instrument.</p><dl><dt>Best orbit</dt><dd>Any</dd><dt>Key gear</dt><dd>Any</dd><dt>Critical</dt><dd class="crit">None: try things and compare reports</dd><dt>Real NASA</dt><dd>Any mission in the archive</dd></dl></div></article></div>
+</section>
+<!-- levels table -->
+<section>
+  <div class="sec-head"><span class="num">05 · Level rules</span><h2>What each level asks of the player</h2>
+  <p>Every level gives three numbers and one hint. Only the science goal is something to achieve; the others are limits and a warning.</p></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Level</th><th>Budget (limit)</th><th>Lifetime (must survive)</th><th>Science goal (to win)</th><th>Main challenge (hint)</th></tr></thead>
+    <tbody>
+      <tr><td><b>1 · Wildfire Watch</b><br><span class="mut">Easy</span></td><td>$180M</td><td>3 years</td><td><b>45</b></td><td>Lots of image data that must get home every day</td></tr>
+      <tr><td><b>2 · Space Weather Sentinel</b><br><span class="mut">Medium</span></td><td>$300M</td><td>5 years</td><td><b>40</b></td><td>Radio at 1.5 million km, and a long 5-year life</td></tr>
+      <tr><td><b>3 · Lunar Ice Prospector</b><br><span class="mut">Medium · featured</span></td><td>$320M</td><td>2 years + Shadowline</td><td><b>50</b></td><td>Battery in shadow, crater rims block the radio</td></tr>
+      <tr><td><b>4 · Mars Climate Orbiter</b><br><span class="mut">Hard</span></td><td>$420M</td><td>3 years</td><td><b>42</b></td><td>43% sunlight, Δv to brake into orbit, slow radio</td></tr>
+      <tr><td><b>5 · Sandbox</b><br><span class="mut">Free play</span></td><td>$2,000M</td><td>3 years</td><td><b>60</b></td><td>None: experiment and compare</td></tr>
+    </tbody>
+  </table></div>
+  <div class="grid">
+    <div class="card"><h3>Science goal = how you win</h3><p>Reach this science index by the end of the mission.</p></div>
+    <div class="card"><h3>Budget = a hard limit</h3><p>Total cost must stay under it or the launch is blocked. Money left over earns points.</p></div>
+    <div class="card"><h3>Lifetime = must survive</h3><p>The spacecraft must keep working this long. Failing early loses points.</p></div>
+    <div class="card"><h3>Main challenge = a hint</h3><p>Not a task. It tells players where missions usually fail, so they pay attention there.</p></div>
+  </div>
+</section>
+
+<!-- design rules -->
+<section>
+  <div class="sec-head"><span class="num">06 · Design rules</span><h2>Six resources, one launch check</h2>
+  <p>Every choice moves several resources at once. A high-resolution telescope adds mass, power use, cost and data, all from one click.</p></div>
+  <div class="res6">
+    <div class="rt"><b>Mass</b><span class="u">kg</span><p>Must fit the bus's carrying limit and the rocket's capacity to the chosen orbit.</p></div>
+    <div class="rt"><b>Power</b><span class="u">W</span><p>Average power made must cover what everything uses, including in shadow.</p></div>
+    <div class="rt"><b>Budget</b><span class="u">$M</span><p>Hardware + 10% assembly and testing + launch + operations per year.</p></div>
+    <div class="rt"><b>Data</b><span class="u">Gb / day</span><p>How much the instruments produce each day.</p></div>
+    <div class="rt"><b>Comms</b><span class="u">Gb / day</span><p>How much the antenna and ground stations can send home.</p></div>
+    <div class="rt"><b>Time</b><span class="u">years + days</span><p>Mission lifetime plus cruise time to far destinations.</p></div>
+  </div>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+  D[Player's design] --> C{Design review}
+  C -- any blocking issue --> F[Must fix before launch]
+  F --> D
+  C -- only warnings --> W[Can launch, but the mission will suffer]
+  C -- all clear --> G[Launch]
+  W --> G
+</pre>
+  </div>
+  <div class="cols">
+    <div class="card"><h3>Blocking issues: must fix</h3><ul>
+      <li>Every subsystem chosen, at least one instrument</li>
+      <li>Payload within the bus's carrying limit</li>
+      <li>Rocket can reach the orbit and lift the whole spacecraft</li>
+      <li>Engine has enough Δv to enter orbit at the Moon, Mars, GEO or L1</li>
+      <li>Total cost within budget</li>
+      <li>Team mode: every player has signed off (any change resets it)</li>
+    </ul></div>
+    <div class="card"><h3>Warnings: allowed, but they hurt</h3><ul>
+      <li>Not enough power: instruments switch off part of the time</li>
+      <li>Battery too small for shadow: instruments go dark, or worse</li>
+      <li>Antenna too slow: extra data is lost</li>
+      <li>Pointing too coarse: blurry observations</li>
+      <li>Orbit doesn't suit the objective</li>
+      <li>Low orbit without thrusters: falls after about 2 years</li>
+    </ul></div>
+  </div>
+  <p class="caption">Exploration bonus: 8 gold crystals are hidden on the island. Each adds $3M to the budget and shows a real space fact.</p>
+</section>
+
+<!-- flight rules -->
+<section>
+  <div class="sec-head"><span class="num">07 · Flight rules</span><h2>What happens every simulated day</h2>
+  <p>Before flight, development runs 3–15% over cost (paid from the reserve) and the rocket can fail at its real reliability (93–98%). Then the engine steps through the mission one day at a time.</p></div>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart TD
+  A[New day] --> B{Still cruising?}
+  B -- yes --> N[Next day]
+  B -- no --> P[Power made today: solar fades 2.5% a year]
+  P --> I[Instruments run as much as power and battery allow]
+  I --> D[Data produced]
+  D --> L{Can the antenna send it all?}
+  L -- yes --> S[Science added]
+  L -- no --> X[Most valuable data sent first, the rest is lost]
+  X --> S
+  S --> H{Radiation fault, flat battery or air drag?}
+  H -- yes --> E[Mission ends early]
+  H -- no --> EV{Event due today?}
+  EV -- yes --> C[Team picks one of two choices]
+  C --> N
+  EV -- no --> N
+  N --> A
+</pre>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Event</th><th>Who decides</th><th>Choice A</th><th>Choice B</th><th>Real NASA case</th></tr></thead>
+    <tbody>
+      <tr><td><b>Solar storm</b></td><td>Comms &amp; Ops</td><td>Safe mode 5 days: lose observations</td><td>Keep observing: risk of −25% science (lower with a radiation-hardened computer)</td><td>May 2024 G5 storm</td></tr>
+      <tr><td><b>Reaction wheel failure</b></td><td>Engineer</td><td>Backup mode: pointing −25%</td><td>Use thrusters: mission 30% shorter (needs chemical thrusters)</td><td>Kepler, 2013</td></tr>
+      <tr><td><b>Ground station outage</b></td><td>Comms &amp; Ops</td><td>Wait 10 days: store data onboard</td><td>Rent backup antennas: $4M</td><td>Deep Space Network time is shared</td></tr>
+      <tr><td><b>Budget cut</b></td><td>Mission Lead</td><td>Pay $10M from the reserve</td><td>Observe 25% less for the rest of the mission</td><td>JWST cost growth</td></tr>
+      <tr><td><b>Debris warning</b> (Earth orbits)</td><td>Mission Lead</td><td>Dodge: lose 1 day (needs propulsion)</td><td>Accept a 1-in-15 risk of losing the spacecraft</td><td>ISS avoidance maneuvers</td></tr>
+      <tr><td><b>Micrometeoroid strike</b></td><td>Engineer</td><td>Accept −15% power</td><td>3 days of diagnostics: only −5%</td><td>JWST mirror hit, 2022</td></tr>
+      <tr><td><b>Unexpected discovery</b></td><td>Science Lead</td><td>20-day campaign: bonus if downlink is strong</td><td>Stay on plan</td><td>LCROSS finds water, 2009</td></tr>
+    </tbody>
+  </table></div>
+  <p class="caption">2, 3 or 4 events per mission depending on difficulty. In the new build, the AI Mission Director picks which event comes next and speaks the CAPCOM line, but the choices and their effects are fixed by the engine.</p>
+</section>
+
+<!-- shadowline rules -->
+<section>
+  <div class="sec-head"><span class="num">08 · Shadowline rules</span><h2>The Moon rover phase</h2>
+  <p>After the orbiter's mission, the player lands a rover near the south pole and plans a route into a shadowed crater to find ice, then back out to sunlight.</p></div>
+  <div class="cols">
+    <div class="card"><h3>Choices made on the island</h3>
+      <dl><dt>Rover</dt><dd>Small (350 kg with lander, 1,500 Wh) or VIPER-class (1,100 kg, 4,500 Wh, drill)</dd>
+      <dt>Relay</dt><dd>None (Earth only) · Orbiter relay (short passes every 2 h) · Rim mast (constant where visible)</dd>
+      <dt>Site</dt><dd>2–3 landing sites: closer to ice vs more sunlight and Earth view</dd></dl></div>
+    <div class="card"><h3>The rules on the surface</h3><ul>
+      <li>In shadow: no charging, and heaters must run</li>
+      <li>No view of Earth or a relay: data stays on the rover</li>
+      <li>Battery at zero: rover lost, with all unsent data</li>
+      <li>Slope over 25°: the rover gets stuck</li>
+      <li><b>Only data that reaches Earth scores</b></li>
+    </ul></div>
+  </div>
+  <p class="caption">The step-by-step logic is drawn in the Shadowline diagram further down (section on how the Moon rover phase works).</p>
+</section>
+
+<!-- science index -->
+<section>
+  <div class="sec-head"><span class="num">09 · Science index</span><h2>How science is measured</h2>
+  <p>The science index measures how much useful science actually reached Earth. Each day, every instrument adds points; the total is averaged over the planned mission, so a spacecraft that dies early scores less.</p></div>
+  <div class="formula" aria-label="Science formula">
+    <span class="f">Base value</span><i>×</i><span class="f">Fit to the objective <small>★ 0–1</small></span><i>×</i><span class="f">Orbit fit <small>0–1</small></span><i>×</i><span class="f">Pointing quality</span><i>×</i><span class="f">Time switched on <small>power, battery</small></span><i>×</i><span class="f">√ data sent home</span>
+  </div>
+  <div class="cols">
+    <div class="tbl"><table>
+      <thead><tr><th>Lunar example</th><th>Base</th><th>Fit</th><th>Points</th></tr></thead>
+      <tbody>
+        <tr><td>Neutron spectrometer</td><td>22</td><td>1.0</td><td>22</td></tr>
+        <tr><td>Laser altimeter</td><td>20</td><td>0.9</td><td>18</td></tr>
+        <tr><td>Thermal infrared imager</td><td>20</td><td>0.6</td><td>12</td></tr>
+        <tr><td><b>Total if everything works</b></td><td></td><td></td><td><b>52</b> (goal 50)</td></tr>
+      </tbody>
+    </table></div>
+    <div class="card"><h3>How the same design loses points</h3>
+      <div class="loss"><span>Everything works</span><i style="width:100%"></i><b>52</b></div>
+      <div class="loss"><span>Small battery: on 80% of the time</span><i style="width:81%"></i><b>42</b></div>
+      <div class="loss"><span>Antenna sends 58% of data</span><i style="width:75%"></i><b>39</b></div>
+      <div class="loss"><span>Spacecraft fails after 1 of 2 years</span><i style="width:50%"></i><b>26</b></div>
+      <p class="caption">The lesson: a great instrument is worth little without power, pointing and a radio to match.</p></div>
+  </div>
+</section>
+
+<!-- scoring -->
+<section>
+  <div class="sec-head"><span class="num">10 · Scoring</span><h2>Score out of 1000, grade and result</h2></div>
+  <div class="scorebar" aria-label="Score breakdown">
+    <div style="flex:400" class="sb1"><b>Science 400</b><span>reach the goal</span></div>
+    <div style="flex:100" class="sb1b"><b>+100</b><span>bonus</span></div>
+    <div style="flex:200" class="sb2"><b>Lifetime 200</b><span>full mission</span></div>
+    <div style="flex:150" class="sb3"><b>Budget 150</b><span>20% left = full</span></div>
+    <div style="flex:150" class="sb4"><b>Roles 150</b><span>4 role goals</span></div>
+  </div>
+  <div class="cols">
+    <div class="card"><h3>Grades</h3>
+      <div class="grades"><span><b>S</b>850+</span><span><b>A</b>700+</span><span><b>B</b>550+</span><span><b>C</b>400+</span><span><b>D</b>below 400</span><span><b>F</b>rocket lost</span></div></div>
+    <div class="card"><h3>Result</h3><ul>
+      <li><b>Mission success:</b> science goal met, full lifetime, within budget</li>
+      <li><b>Partial success:</b> at least half the science goal</li>
+      <li><b>Mission loss:</b> anything less</li></ul></div>
+  </div>
+  <div class="grid">
+    <div class="card ws" style="--c:#ffb347"><h3>Mission Lead</h3><p>Keep at least 10% of the budget in reserve.</p></div>
+    <div class="card ws" style="--c:#5ad1ff"><h3>Spacecraft Engineer</h3><p>At least 20% spare power and 10% spare rocket capacity.</p></div>
+    <div class="card ws" style="--c:#b98cff"><h3>Science Lead</h3><p>Expected science at least 110% of the goal.</p></div>
+    <div class="card ws" style="--c:#6cf08a"><h3>Comms &amp; Ops</h3><p>Downlink covers 100% of daily data.</p></div>
+  </div>
+  <p class="caption">The four role goals pull against each other on purpose: science wants more instruments, the engineer wants margins, the lead wants money left over. Teams must negotiate.</p>
+</section>
+
+<!-- difficulty -->
+<section>
+  <div class="sec-head"><span class="num">11 · Difficulty</span><h2>Three difficulty levels</h2></div>
+  <div class="tbl"><table>
+    <thead><tr><th></th><th>Cadet</th><th>Engineer</th><th>Flight Director</th></tr></thead>
+    <tbody>
+      <tr><td>Budget</td><td>×1.25</td><td>×1</td><td>×0.85</td></tr>
+      <tr><td>In-flight events</td><td>2</td><td>3</td><td>4</td></tr>
+      <tr><td>Cost overrun</td><td>×0.5</td><td>×1</td><td>×1.5</td></tr>
+      <tr><td>Failure risk</td><td>×0.5</td><td>×1</td><td>×1.6</td></tr>
+      <tr><td>Advanced parts <span class="st gap">to add</span></td><td>Hidden, forecasts shown</td><td>All</td><td>All</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- architecture stack -->
+<section>
+  <div class="sec-head"><span class="num">12 · Full architecture</span><h2>Every component, explained</h2>
+  <p><span class="st simp">Today</span> The controller is <code>main.js</code>, the engine runs in the browser's main thread, and saved data lives only in the browser; the server side is the Ask CAPCOM route alone. Seven main components. Read top to bottom: the player acts, the controller coordinates, the engine calculates, then the AI and the 3D view react, and everything is recorded.</p></div>
+  <div class="stack">
+    <div class="node"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
+      <b>1. Player</b><p>The student playing, solo or as a crew of up to 4 taking turns, each with a role.</p>
+      <span class="tech">Mission Lead · Spacecraft Engineer · Science Lead · Comms &amp; Ops</span></div>
+    <div class="arr" aria-hidden="true">↓</div>
+    <div class="node"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M9 20h6M12 16v4"/></svg>
+      <b>2. Web App / Game Interface</b><p>Shows the game and receives every click, key and chat message.</p>
+      <span class="tech">Next.js + React + Tailwind · <code>app/</code>, <code>components/</code></span></div>
+    <div class="arr" aria-hidden="true">↓</div>
+    <div class="node"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><path d="M10 6.5h4a3 3 0 0 1 3 3V14"/></svg>
+      <b>3. Game Controller</b><p>Coordinates everything after the player acts: checks the action is allowed (right role, right phase), asks the engine, triggers the AI and the 3D view, saves progress.</p>
+      <span class="tech">TypeScript actions on a Zustand store · <code>lib/game/controller.ts</code></span></div>
+    <div class="arr" aria-hidden="true">↓</div>
+    <div class="node core"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><rect x="8" y="6" width="8" height="3" rx="0.5"/><path d="M8.5 13h.01M12 13h.01M15.5 13h.01M8.5 16.5h.01M12 16.5h.01M15.5 16.5h.01"/></svg>
+      <b>4. Simulation Engine</b><p>Calculates what actually happens: mass, power, data, cost, orbits, flight days, events, rover battery and line of sight, score. The only source of truth.</p>
+      <span class="tech">Pure TypeScript <code>@mi/sim</code> · runs in a Web Worker and on the server</span></div>
+    <div class="arr" aria-hidden="true">↓</div>
+    <div class="pair">
+      <div class="node"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z"/></svg>
+        <b>5. AI Mission Director (CAPCOM)</b><p>Creates events, radio dialogue, coaching, the design review and the debrief. Uses the engine's numbers; never changes them.</p>
+        <span class="tech">Claude via <code>/api/*</code> routes · <code>lib/ai/</code></span></div>
+      <div class="node"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 22V12M21 7l-9 5-9-5"/></svg>
+        <b>6. 3D Renderer</b><p>Displays the island, launch, orbit and Moon crater, and shows every change the engine reports.</p>
+        <span class="tech">React Three Fiber + Rapier · <code>scenes/</code></span></div>
+    </div>
+    <div class="arr" aria-hidden="true">↓</div>
+    <div class="node"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
+      <b>7. Game State / Storage</b><p>Keeps track of the design, resources, events, crew and progress. Live state in the browser; saved designs, runs and leaderboard in the database.</p>
+      <span class="tech">Zustand (live) · Postgres, Redis, Vercel Blob (saved)</span></div>
+  </div>
+</section>
+
+<!-- 2 system map -->
+<section>
+  <div class="sec-head"><span class="num">13 · System map</span><h2>Where every piece runs</h2>
+  <p>One engine package, <code>@mi/sim</code>, runs in two places: in a Web Worker for instant feedback, and on Vercel to answer the AI's tool calls and to verify leaderboard scores.</p></div>
+  <div class="diagram">
+    <svg viewBox="0 0 1000 660" role="img" aria-label="System map: browser, Vercel, and services layers">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker>
+      </defs>
+      <g font-family="Inter, system-ui, sans-serif">
+        <!-- Browser band -->
+        <rect x="20" y="20" width="960" height="214" rx="14" fill="var(--browser-tint)" stroke="var(--browser)" stroke-width="1.5"/>
+        <text x="40" y="46" font-size="13" font-weight="600" fill="var(--browser)" font-family="JetBrains Mono, monospace" letter-spacing="1">IN THE PLAYER'S BROWSER</text>
+        <rect x="40" y="62" width="290" height="96" rx="10" fill="var(--surface)" stroke="var(--browser)"/>
+        <text x="56" y="88" font-size="16" font-weight="600" fill="var(--ink)" font-family="Space Grotesk, sans-serif">Screens &amp; HUD</text>
+        <text x="56" y="110" font-size="13" fill="var(--muted)">React, Tailwind, shadcn/ui</text>
+        <text x="56" y="130" font-size="13" fill="var(--muted)">menu, panels, chat, report</text>
+        <rect x="355" y="62" width="290" height="96" rx="10" fill="var(--surface)" stroke="var(--browser)"/>
+        <text x="371" y="88" font-size="16" font-weight="600" fill="var(--ink)" font-family="Space Grotesk, sans-serif">Sim worker</text>
+        <text x="371" y="110" font-size="13" fill="var(--muted)">@mi/sim inside a Web Worker</text>
+        <text x="371" y="130" font-size="13" fill="var(--muted)">instant numbers, keeps 60 fps</text>
+        <rect x="670" y="62" width="290" height="96" rx="10" fill="var(--surface)" stroke="var(--browser)"/>
+        <text x="686" y="88" font-size="16" font-weight="600" fill="var(--ink)" font-family="Space Grotesk, sans-serif">3D scenes</text>
+        <text x="686" y="110" font-size="13" fill="var(--muted)">React Three Fiber + Rapier</text>
+        <text x="686" y="130" font-size="13" fill="var(--muted)">island, launch, orbit, crater</text>
+        <rect x="40" y="178" width="920" height="40" rx="10" fill="var(--surface)" stroke="var(--browser)" stroke-width="2"/>
+        <text x="500" y="203" text-anchor="middle" font-size="14" font-weight="600" fill="var(--ink)">Game state (Zustand): design · phase · players · results</text>
+        <g stroke="var(--muted)" stroke-width="1.5" fill="none">
+          <line x1="185" y1="160" x2="185" y2="176" marker-start="url(#ah)" marker-end="url(#ah)"/>
+          <line x1="500" y1="160" x2="500" y2="176" marker-start="url(#ah)" marker-end="url(#ah)"/>
+          <line x1="815" y1="160" x2="815" y2="176" marker-start="url(#ah)" marker-end="url(#ah)"/>
+        </g>
+
+        <!-- Vercel band -->
+        <rect x="20" y="282" width="960" height="172" rx="14" fill="var(--server-tint)" stroke="var(--server)" stroke-width="1.5"/>
+        <text x="40" y="308" font-size="13" font-weight="600" fill="var(--server)" font-family="JetBrains Mono, monospace" letter-spacing="1">ON VERCEL (SERVERLESS)</text>
+        <rect x="40" y="326" width="290" height="108" rx="10" fill="var(--surface)" stroke="var(--server)"/>
+        <text x="56" y="352" font-size="16" font-weight="600" fill="var(--ink)" font-family="Space Grotesk, sans-serif">API routes</text>
+        <text x="56" y="374" font-size="13" fill="var(--muted)" font-family="JetBrains Mono, monospace">/api/capcom · review · director</text>
+        <text x="56" y="394" font-size="13" fill="var(--muted)" font-family="JetBrains Mono, monospace">/api/debrief · runs · scenarios</text>
+        <text x="56" y="414" font-size="12" fill="var(--muted)">rate limit, validate, stream</text>
+        <rect x="355" y="326" width="290" height="108" rx="10" fill="var(--surface)" stroke="var(--server)" stroke-width="2"/>
+        <text x="371" y="352" font-size="16" font-weight="600" fill="var(--ink)" font-family="Space Grotesk, sans-serif">AI orchestrator</text>
+        <text x="371" y="374" font-size="13" fill="var(--muted)">prompts, tools, Zod checks</text>
+        <text x="371" y="394" font-size="13" fill="var(--muted)">scripted fallback if AI fails</text>
+        <rect x="670" y="326" width="290" height="108" rx="10" fill="var(--surface)" stroke="var(--server)"/>
+        <text x="686" y="352" font-size="16" font-weight="600" fill="var(--ink)" font-family="Space Grotesk, sans-serif">@mi/sim (server copy)</text>
+        <text x="686" y="374" font-size="13" fill="var(--muted)">answers the AI's tool calls</text>
+        <text x="686" y="394" font-size="13" fill="var(--muted)">re-runs missions to verify scores</text>
+        <g stroke="var(--muted)" stroke-width="1.5" fill="none">
+          <line x1="332" y1="380" x2="353" y2="380" marker-end="url(#ah)"/>
+          <line x1="647" y1="380" x2="668" y2="380" marker-start="url(#ah)" marker-end="url(#ah)"/>
+        </g>
+
+        <!-- browser to vercel -->
+        <g stroke="var(--muted)" stroke-width="1.5" fill="none">
+          <line x1="185" y1="220" x2="185" y2="324" marker-start="url(#ah)" marker-end="url(#ah)"/>
+          <line x1="815" y1="220" x2="815" y2="324" stroke-dasharray="5 5"/>
+        </g>
+        <text x="195" y="262" font-size="12.5" fill="var(--ink)">fetch /api/…</text>
+        <text x="195" y="279" font-size="12" fill="var(--muted)">streamed answers back</text>
+        <text x="825" y="262" font-size="12.5" fill="var(--ink)">same engine code</text>
+        <text x="825" y="279" font-size="12" fill="var(--muted)">on both sides</text>
+
+        <!-- Services band -->
+        <rect x="20" y="502" width="960" height="138" rx="14" fill="var(--svc-tint)" stroke="var(--svc)" stroke-width="1.5"/>
+        <text x="40" y="528" font-size="13" font-weight="600" fill="var(--svc)" font-family="JetBrains Mono, monospace" letter-spacing="1">SERVICES AND STORAGE</text>
+        <rect x="40" y="546" width="171" height="74" rx="10" fill="var(--surface)" stroke="var(--svc)"/>
+        <text x="54" y="572" font-size="15" font-weight="600" fill="var(--ink)" font-family="Space Grotesk, sans-serif">Postgres (Neon)</text>
+        <text x="54" y="594" font-size="12.5" fill="var(--muted)">designs, runs, classes</text>
+        <rect x="227" y="546" width="171" height="74" rx="10" fill="var(--surface)" stroke="var(--svc)"/>
+        <text x="241" y="572" font-size="15" font-weight="600" fill="var(--ink)" font-family="Space Grotesk, sans-serif">Redis (Upstash)</text>
+        <text x="241" y="594" font-size="12.5" fill="var(--muted)">rate limits, AI cache</text>
+        <rect x="414" y="546" width="171" height="74" rx="10" fill="var(--surface)" stroke="var(--server)" stroke-width="2"/>
+        <text x="428" y="572" font-size="15" font-weight="600" fill="var(--ink)" font-family="Space Grotesk, sans-serif">Claude API</text>
+        <text x="428" y="594" font-size="12.5" fill="var(--muted)" font-family="JetBrains Mono, monospace">claude-opus-5-5</text>
+        <rect x="601" y="546" width="171" height="74" rx="10" fill="var(--offline-tint)" stroke="var(--offline)" stroke-dasharray="5 4"/>
+        <text x="615" y="572" font-size="15" font-weight="600" fill="var(--ink)" font-family="Space Grotesk, sans-serif">Python pipeline</text>
+        <text x="615" y="594" font-size="12.5" fill="var(--muted)">Moon Trek → tiles</text>
+        <rect x="788" y="546" width="171" height="74" rx="10" fill="var(--surface)" stroke="var(--svc)"/>
+        <text x="802" y="572" font-size="15" font-weight="600" fill="var(--ink)" font-family="Space Grotesk, sans-serif">Vercel Blob</text>
+        <text x="802" y="594" font-size="12.5" fill="var(--muted)">terrain, models, audio</text>
+
+        <g stroke="var(--muted)" stroke-width="1.5" fill="none">
+          <line x1="125" y1="436" x2="125" y2="544" marker-end="url(#ah)"/>
+          <line x1="300" y1="436" x2="300" y2="544" marker-end="url(#ah)"/>
+          <line x1="500" y1="436" x2="500" y2="544" marker-start="url(#ah)" marker-end="url(#ah)"/>
+          <line x1="774" y1="583" x2="786" y2="583" marker-end="url(#ah)"/>
+          <path d="M961 583 H972 V110 H962" marker-end="url(#ah)"/>
+        </g>
+        <text x="133" y="476" font-size="12" fill="var(--muted)">save, load</text>
+        <text x="308" y="476" font-size="12" fill="var(--muted)">limits, cache</text>
+        <text x="508" y="476" font-size="12" fill="var(--muted)">prompts + tool calls</text>
+        <text x="966" y="476" font-size="12" fill="var(--muted)" text-anchor="end">3D assets</text>
+      </g>
+    </svg>
+  </div>
+  <p class="caption">Dashed box: the Python pipeline runs on a laptop or in GitHub Actions, not during play. The dashed line marks the same <code>@mi/sim</code> code running in the browser and on the server.</p>
+</section>
+
+<!-- 3d plan -->
+<section>
+  <div class="sec-head"><span class="num">14 · 3D plan</span><h2>How we make every 3D scene</h2>
+  <p>Five scenes to build. Anything the game logic depends on (the spacecraft, the rocket, the crater) is made from code or real NASA data. AI is used only for backdrops and small props.</p></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Scene</th><th>What it should look like</th><th>How we make it</th><th>Source</th></tr></thead>
+    <tbody>
+      <tr><td><b>1 · Island</b><br><span class="mut">design phase</span></td><td>Golden-hour island, soft shadows, shiny sea, five distinct buildings</td><td>HDRI sky + bloom; buildings modeled in Blender with Python scripts → <code>.glb</code>; trees and rocks from CC0 packs</td><td>Blender, Poly Haven, Kenney / Quaternius</td></tr>
+      <tr><td><b>2 · Spacecraft</b><br><span class="mut">on the hangar stand</span></td><td>Gold foil, metal, solar panels; changes the moment a part is picked</td><td>Built from parts <b>in code</b>; metal and foil materials that reflect the HDRI</td><td>Our code</td></tr>
+      <tr><td><b>3 · Launch</b></td><td>Camera cuts, engine glow, smoke, sky turning black, staging</td><td>Rocket in code or Blender; particle smoke; bloom on the flame; scripted camera</td><td>Our code, Blender</td></tr>
+      <tr><td><b>4 · Orbit view</b><br><span class="mut">flight</span></td><td>Real Earth, Moon or Mars, stars, the Sun's glare</td><td>NASA surface maps on spheres; star field; bloom on the Sun</td><td>NASA Blue Marble, NASA SVS CGI Moon Kit</td></tr>
+      <tr><td><b>5 · Moon crater</b><br><span class="mut">Shadowline</span></td><td>Pitch-black shadows, rover headlights, a thin Earth on the horizon</td><td>Terrain mesh from real elevation data; one very low sunlight; headlight spotlights; rover from Blender or code</td><td>NASA Moon Trek (LOLA)</td></tr>
+      <tr><td><b>Optional</b><br><span class="mut">backdrop</span></td><td>A rich Mission Control interior</td><td>AI-generated 3D world, used as decoration only, with our own screens and buttons on top</td><td>World Labs</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="grid">
+    <div class="card"><h3>Engine</h3><ul><li><b>React Three Fiber</b> (Three.js for React)</li><li><code>drei</code>: sky, stars, model loading</li><li><code>postprocessing</code>: bloom, colour grading</li><li><code>rapier</code>: walking, collisions</li></ul></div>
+    <div class="card"><h3>Making models</h3><ul><li><b>Blender</b> (free), scripted with Python; Claude can write the scripts</li><li><b>Code</b> for anything that changes live</li><li><code>gltfjsx</code> + <code>gltf-transform</code> to turn models into components and compress them</li></ul></div>
+    <div class="card"><h3>Free assets</h3><ul><li><b>NASA</b>: 3D spacecraft models, Blue Marble, Moon Kit, Moon Trek</li><li><b>Poly Haven</b>: HDRIs and textures (CC0)</li><li><b>Kenney, Quaternius</b>: props and characters (CC0)</li><li>Sketchfab only after checking each license</li></ul></div>
+    <div class="card"><h3>AI (only where it is safe)</h3><ul><li><b>World Labs</b>: backdrop scenes</li><li><b>Text-to-3D tools</b>: small props, then cleanup in Blender</li><li><b>AI images</b>: skybox, screen graphics</li><li>Never for anything the simulation depends on</li></ul></div>
+  </div>
+
+  <div class="cols">
+    <div><h3 style="margin-bottom:10px">Order of work: biggest visual gain first</h3>
+    <ol class="order">
+      <li><div class="body"><b>Lighting and post-processing</b><span class="done">HDRI sky, colour grading, bloom. About a day; every scene looks better at once.</span></div></li>
+      <li><div class="body"><b>Real planets</b><span class="done">Swap procedural textures for NASA maps in the orbit view.</span></div></li>
+      <li><div class="body"><b>Spacecraft materials</b><span class="done">Gold foil, metal and glass that reflect the sky.</span></div></li>
+      <li class="gate"><div class="body"><b>Launch cinematic</b><span class="done">Camera cuts, smoke, darkening sky. Hero shot 1 for the video.</span></div></li>
+      <li class="gate"><div class="body"><b>Moon crater</b><span class="done">Real terrain, low Sun, headlights. Hero shot 2.</span></div></li>
+      <li><div class="body"><b>Buildings from Blender</b><span class="done">Replace simple boxes with modeled buildings.</span></div></li>
+      <li><div class="body"><b>Props and astronaut</b><span class="done">CC0 packs, or AI text-to-3D with cleanup.</span></div></li>
+      <li><div class="body"><b>AI backdrop</b><span class="done">Only if time is left.</span></div></li>
+    </ol></div>
+    <div class="card"><h3>3D rules</h3><ul>
+      <li><b>The simulation decides; 3D only shows.</b> Crater shadows come from the same sunlight calculation the game uses.</li>
+      <li><b>Fast:</b> compress every model; 60 fps on a mid-range laptop; shadows and bloom turn off on slow machines.</li>
+      <li><b>Licensed:</b> keep a list of every model, texture and map with its license and credit, for the project page.</li>
+      <li><b>No NASA logos</b> or insignia on our models.</li>
+      <li><b>Original:</b> learn from Red Frontier's method (scripted Blender scenes exported as <code>.glb</code>), but don't reuse their art.</li>
+    </ul>
+    <h3 style="margin-top:12px">About world models</h3>
+    <p class="mut" style="font-size:13.5px">AI that makes 3D scenes to export and keep (like World Labs) is a good tool for scenery. AI that streams live video worlds is not used: it can't follow our simulation's numbers, costs money every minute, and needs a live connection during the demo.</p></div>
+  </div>
+</section>
+
+<!-- 3 decision flow -->
+<section>
+  <div class="sec-head"><span class="num">15 · One decision, end to end</span><h2>What happens when a player clicks</h2>
+  <p>Example: the player adds a high-resolution telescope, sees the data bar turn red, and asks CAPCOM how to fix it.</p></div>
+  <div class="diagram">
+<pre class="mermaid">
+sequenceDiagram
+  actor P as Player
+  participant UI as Screens
+  participant S as Game state
+  participant W as Sim worker
+  participant API as /api/capcom
+  participant C as Claude
+  participant SV as @mi/sim server
+  P->>UI: picks high-res telescope
+  UI->>S: update design
+  S->>W: evaluate(design)
+  W-->>S: metrics + checks, under 5 ms
+  S-->>UI: data bar turns red, one-line why
+  P->>UI: asks how to fix the data problem
+  UI->>API: question + current design
+  API->>C: system prompt + tools + NASA facts, cached
+  C->>API: tool call what_if, comms = ka
+  API->>SV: evaluate(design + change)
+  SV-->>API: real numbers
+  API->>C: tool result
+  C-->>UI: streamed answer + Apply button
+  P->>UI: clicks Apply, bars turn green
+</pre>
+  </div>
+</section>
+
+<!-- 4 AI features -->
+<section>
+  <div class="sec-head"><span class="num">16 · AI features</span><h2>Five places Claude helps, each with a safety net</h2>
+  <p>All run on <code>claude-opus-5-5</code>. Effort is set per feature: low where speed matters, high where quality matters.</p></div>
+  <div class="grid">
+    <div class="card"><h3>Ask CAPCOM <span class="st ok">Built</span></h3><span class="route">POST /api/capcom · streaming</span>
+      <dl><dt>When</dt><dd>Any time on the island</dd><dt>Does</dt><dd>Answers questions, runs what-if tests</dd><dt>Guard</dt><dd>Every number must come from a tool call</dd><dt>Fallback</dt><dd>Shows the design-review explanation text</dd></dl></div>
+    <div class="card"><h3>Design Review Board <span class="st no">Not yet</span></h3><span class="route">POST /api/review · effort high</span>
+      <dl><dt>When</dt><dd>Before launch, the CML 4 gate</dd><dt>Does</dt><dd>3 ranked suggestions as design changes</dd><dt>Guard</dt><dd>Server tests each change; only real improvements shown</dd><dt>Fallback</dt><dd>Lists the failing checks</dd></dl></div>
+    <div class="card"><h3>Mission Director <span class="st no">Not yet</span></h3><span class="route">POST /api/director · effort low</span>
+      <dl><dt>When</dt><dd>At each event slot in flight</dd><dt>Does</dt><dd>Picks the next event + radio line</dd><dt>Guard</dt><dd>Structured output; event must be in the catalog and allowed</dd><dt>Fallback</dt><dd>Random scripted event</dd></dl></div>
+    <div class="card"><h3>Mission Debrief <span class="st no">Not yet</span></h3><span class="route">POST /api/debrief · cached</span>
+      <dl><dt>When</dt><dd>After the mission</dd><dt>Does</dt><dd>Story of what happened, why, and lessons</dd><dt>Guard</dt><dd>Input is only the result + log; NASA facts by ID</dd><dt>Fallback</dt><dd>Current scripted analysis</dd></dl></div>
+    <div class="card"><h3>Scenario Builder <span class="st no">Not yet</span></h3><span class="route">POST /api/scenarios · teacher</span>
+      <dl><dt>When</dt><dd>A teacher sets up a class</dd><dt>Does</dt><dd>Turns a described goal into a playable mission</dd><dt>Guard</dt><dd>Schema check + solver proves it is winnable</dd><dt>Fallback</dt><dd>Pick from built-in missions</dd></dl></div>
+  </div>
+</section>
+
+<!-- 5 tool loop -->
+<section>
+  <div class="sec-head"><span class="num">17 · Inside the AI orchestrator</span><h2>The tool loop, step by step</h2>
+  <p>Claude never calculates. It asks our engine through read-only tools, then explains the answer.</p></div>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+  Q[Player question + design] --> RL{Under rate limit?}
+  RL -- no --> FB[Scripted answer]
+  RL -- yes --> V[Validate design with Zod]
+  V --> P[Build prompt: tools, system, NASA facts cached, then question]
+  P --> C[Claude]
+  C -- tool call --> T[Run tool on @mi/sim]
+  T -- numbers --> C
+  C -- final answer --> CK{Refusal or error?}
+  CK -- yes --> FB
+  CK -- no --> S[Stream to player]
+</pre>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Tool</th><th>Input</th><th>Returns</th></tr></thead>
+    <tbody>
+      <tr><td><code>get_metrics</code></td><td>design</td><td>mass, power, data, cost, science estimate, checks</td></tr>
+      <tr><td><code>what_if</code></td><td>design + list of changes</td><td>before / after metrics for each change</td></tr>
+      <tr><td><code>explain_check</code></td><td>check id</td><td>the rule, the numbers, what fixes it</td></tr>
+      <tr><td><code>compare_missions</code></td><td>design</td><td>closest real NASA missions and why</td></tr>
+      <tr><td><code>lookup_fact</code></td><td>topic</td><td>a NASA knowledge-base entry with its source link</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- 6 Shadowline -->
+<section>
+  <div class="sec-head"><span class="num">18 · Shadowline</span><h2>How the Moon rover phase works</h2>
+  <p>Real NASA Moon Trek elevation data is turned into tiles once, offline. During play, every 15 simulated minutes the engine asks two questions: can the rover see the Sun, and can it see Earth or a relay?</p></div>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart TD
+  DEM[Moon Trek elevation, south pole] --> PY[Python pipeline: crop, resample, horizon maps]
+  PY --> BLOB[Tiles in Vercel Blob]
+  BLOB --> POS[Rover position on real terrain]
+  POS --> SUN{Can it see the Sun?}
+  SUN -- yes --> CH[Solar panels charge the battery]
+  SUN -- no --> DR[Battery drains, heaters on]
+  POS --> EA{Can it see Earth or the relay?}
+  EA -- yes --> TX[Ice data sent home]
+  EA -- no --> HOLD[Data stays on the rover]
+  DR --> EMPTY{Battery empty?}
+  EMPTY -- yes --> LOST[Rover lost, unsent data lost]
+  EMPTY -- no --> NEXT[Drive to next waypoint]
+  CH --> NEXT
+  TX --> NEXT
+  HOLD --> NEXT
+  NEXT --> POS
+</pre>
+  </div>
+  <p class="caption">The 3D crater only shows what the engine computed: sunlit ground is lit, and the signal line turns red when contact is lost. The surprising failure comes from the red branches: the rover finds the ice, then dies before its data gets home.</p>
+</section>
+
+<!-- 7 data -->
+<section>
+  <div class="sec-head"><span class="num">19 · Data</span><h2>What we store</h2>
+  <p>Postgres holds anything that must last. Players are anonymous IDs: no emails, no passwords.</p></div>
+  <div class="diagram">
+<pre class="mermaid">
+erDiagram
+  CLASSES ||--o{ PLAYERS : has
+  PLAYERS ||--o{ DESIGNS : saves
+  DESIGNS ||--o{ RUNS : "flown as"
+  CLASSES }o--o{ SCENARIOS : uses
+  PLAYERS ||--o{ QUIZ_ANSWERS : gives
+  PLAYERS {
+    uuid id PK
+    string display_name
+    uuid class_id FK
+  }
+  DESIGNS {
+    uuid id PK
+    uuid player_id FK
+    string scenario
+    json design
+  }
+  RUNS {
+    uuid id PK
+    uuid design_id FK
+    int seed
+    json result
+    int score
+    bool verified
+  }
+  CLASSES {
+    uuid id PK
+    string code
+    string teacher_name
+  }
+  SCENARIOS {
+    string id PK
+    json scenario
+    bool validated
+  }
+  QUIZ_ANSWERS {
+    uuid player_id FK
+    string phase
+    json answers
+  }
+</pre>
+  </div>
+  <p class="caption"><span class="st no">Not yet</span> The database is not built yet: today the leaderboard is saved in each player's browser and designs are shared by link. Planned: a run only appears on the leaderboard once the server re-runs it with the same design and seed and gets the same score (<code>verified = true</code>). An extra <code>ai_events</code> table logs tokens, latency and fallbacks for each AI call.</p>
+</section>
+
+<!-- 8 contracts -->
+<section>
+  <div class="sec-head"><span class="num">20 · Shared contracts</span><h2>The types and endpoints everyone codes against</h2>
+  <p>Agree on these on day one so the four workstreams can build in parallel. They live in <code>packages/sim/src/types.ts</code>.</p></div>
+  <div class="cols">
+<pre class="code"><span class="c">// The player's choices (what gets saved and shared)</span>
+<span class="k1">type</span> Design = {
+  scenario: ScenarioId;  difficulty: Difficulty;
+  orbit: OrbitId | null;  lv: LauncherId | null;
+  bus, power, battery, computer, adcs, prop,
+  comms, gs, rover, relay: PartId | null;
+  instruments: InstrumentId[];  duty: number;
+};
+
+<span class="c">// What the engine says about a design</span>
+<span class="k1">type</span> Metrics = {
+  mass, power, data, cost, time, science;
+  checks: Check[];      <span class="c">// design review</span>
+  blocking: Check[];    <span class="c">// stops launch</span>
+};
+
+<span class="c">// What a finished mission produced</span>
+<span class="k1">type</span> RunResult = {
+  seed: number;  science: number;  lifeFrac: number;
+  spent: number;  log: LogEntry[];
+  surface?: SurfaceResult;   <span class="c">// Shadowline</span>
+  score: Score;
+};</pre>
+<pre class="code"><span class="c">// Engine API (pure functions, same in browser and server)</span>
+evaluate(design): Metrics
+runFlight(design, seed, choices): RunResult
+runSurface(design, plan, terrain): SurfaceResult
+score(result): Score
+
+<span class="c">// HTTP API (Next.js route handlers)</span>
+<span class="k2">POST</span> /api/capcom     { design, messages } → text stream
+<span class="k2">POST</span> /api/review     { design }   → Suggestion[] (tested)
+<span class="k2">POST</span> /api/director   { state }    → { eventId, line }
+<span class="k2">POST</span> /api/debrief    { result }   → text stream
+<span class="k2">POST</span> /api/runs       { design, seed, choices } → { verified, score }
+<span class="k2">GET </span> /api/leaderboard?scenario=lunar → Entry[]
+<span class="k2">POST</span> /api/scenarios  { description } → Scenario
+<span class="k2">GET </span> /d/[id]          shared design page</pre>
+  </div>
+</section>
+
+<!-- 9 repo -->
+<section>
+  <div class="sec-head"><span class="num">21 · Repository</span><h2>Where code lives</h2>
+  <p><span class="st simp">Today</span> One Next.js app: <code>mission-island-web/src/game/sim</code> (engine), <code>client</code> (3D and screens), <code>server</code> (CAPCOM). The planned layout below splits it into packages. One monorepo (pnpm workspaces + Turborepo). The colour after each folder shows its workstream in the next section.</p></div>
+<pre class="code">mission-island/
+├─ apps/web/                      <span class="c">Next.js app, deployed to Vercel</span>
+│  ├─ app/page.tsx                <span class="c">menu</span>                       <span class="k2">● UI</span>
+│  ├─ app/play/page.tsx           <span class="c">the game</span>                   <span class="k2">● UI</span>
+│  ├─ app/api/*/route.ts          <span class="c">capcom, review, director, debrief, runs, scenarios</span>  <span class="k1">● AI</span>
+│  ├─ components/                 <span class="c">HUD, panels, chat, report</span>  <span class="k2">● UI</span>
+│  ├─ scenes/                     <span class="c">island, launch, orbit, crater</span>  ● 3D
+│  ├─ workers/sim.worker.ts       <span class="c">runs @mi/sim off the main thread</span>  ● 3D
+│  └─ lib/ai/                     <span class="c">orchestrator, prompts, tools, fallbacks</span>  <span class="k1">● AI</span>
+├─ packages/sim/                  <span class="c">@mi/sim: engine + Vitest tests</span>  ● Engine
+├─ packages/content/              <span class="c">game data + NASA knowledge base, with sources</span>  ● Engine
+├─ packages/db/                   <span class="c">Drizzle schema + migrations</span>  <span class="k1">● AI</span>
+├─ pipeline/                      <span class="c">Python: Moon Trek → tiles + horizon maps</span>  ● Engine
+├─ evals/                         <span class="c">AI answer tests</span>  <span class="k1">● AI</span>
+└─ e2e/                           <span class="c">Playwright: full mission, AI in mock mode</span>  <span class="k2">● UI</span></pre>
+</section>
+
+<!-- 10 workstreams -->
+<section>
+  <div class="sec-head"><span class="num">22 · Who builds what</span><h2>Four workstreams</h2>
+  <p>Put a name on each card. With fewer people, one person can take two cards; with six, pair up on 3D and AI.</p></div>
+  <div class="grid">
+    <div class="card ws" style="--c:var(--offline)"><h3>Engine &amp; Data</h3><span class="folders">packages/sim · packages/content · pipeline</span>
+      <ul><li>Port <code>model.js</code>, <code>sim.js</code>, <code>physics.js</code> to TypeScript</li><li>Vitest: physics, balance, determinism</li><li>Shadowline surface engine</li><li>Moon Trek pipeline, sources ledger</li></ul></div>
+    <div class="card ws" style="--c:var(--browser)"><h3>3D &amp; Gameplay</h3><span class="folders">scenes · workers</span>
+      <ul><li>Island in React Three Fiber, walking with Rapier</li><li>Sim worker with Comlink</li><li>Launch cinematic, orbit view</li><li>Crater scene and rover route planning</li></ul></div>
+    <div class="card ws" style="--c:var(--accent)"><h3>UI &amp; Experience</h3><span class="folders">components · app pages · e2e</span>
+      <ul><li>Resource bar, objective line, station panels</li><li>Chat panel for CAPCOM</li><li>Report and leaderboard screens</li><li>Playwright tests, audio, quiz</li></ul></div>
+    <div class="card ws" style="--c:var(--server)"><h3>AI &amp; Backend</h3><span class="folders">lib/ai · app/api · packages/db · evals</span>
+      <ul><li>Vercel project, Neon, Upstash, env vars</li><li><code>/api/capcom</code> with tools + fallback first</li><li>Review Board, Director, Debrief</li><li>Runs verification, eval suite</li></ul></div>
+  </div>
+</section>
+
+<!-- 11 build order -->
+<section>
+  <div class="sec-head"><span class="num">23 · Build order</span><h2>Nine steps; each one ends with something that works</h2>
+  <p>Orange circles are gates: stop and check before moving on. After step 3 we already have a submittable game.</p></div>
+  <ol class="order">
+    <li><div class="body"><b>Repo, Vercel and contracts</b> <span class="st ok">Done</span><span class="done">Done when: an empty Next.js page is live on a Vercel URL, and the types in the Shared contracts section are merged.</span><span class="who">All · day 1</span></div></li>
+    <li><div class="body"><b>Engine in TypeScript</b> <span class="st no">Not yet</span><span class="done">Done when: <code>@mi/sim</code> gives the same results as the current game, tests pass.</span><span class="who">Engine &amp; Data</span></div></li>
+    <li class="gate"><div class="body"><b>Playable loop in Next.js</b> <span class="st ok">Done</span> <span class="pill go">submittable</span><span class="done">Done when: menu → island → launch → flight → report works on the live URL with no AI.</span><span class="who">3D &amp; Gameplay + UI</span></div></li>
+    <li><div class="body"><b>Ask CAPCOM</b><span class="done">Done when: the chat answers with tool numbers, streams, and falls back cleanly when the key is removed.</span><span class="who">AI &amp; Backend + UI</span></div></li>
+    <li class="gate"><div class="body"><b>Shadowline</b><span class="done">Done when: the rover can find ice and fail in the dark, and the debrief shows the hour it lost signal.</span><span class="who">Engine + 3D</span></div></li>
+    <li><div class="body"><b>Review Board, Director, Debrief</b> <span class="st no">Not yet</span><span class="done">Done when: all three work and have fallbacks; evals pass.</span><span class="who">AI &amp; Backend</span></div></li>
+    <li><div class="body"><b>Saves and verified leaderboard</b> <span class="st no">Not yet</span><span class="done">Done when: share links open a design, and only server-verified runs rank.</span><span class="who">AI &amp; Backend</span></div></li>
+    <li><div class="body"><b>Polish</b> <span class="st simp">Partly</span><span class="done">Done when: lighting, launch, crater and audio look right at 60 fps on a mid-range laptop.</span><span class="who">3D + UI</span></div></li>
+    <li class="gate"><div class="body"><b>Ship</b> <span class="st simp">In progress</span><span class="done">Done when: student playtest with quiz, facts checked, 30-second video recorded, project submitted.</span><span class="who">All</span></div></li>
+  </ol>
+  <p class="caption">Never cut: the full design → flight → report loop, the deterministic engine, AI fallbacks, the live URL. Teacher mode and the Scenario Builder are stretch goals.</p>
+</section>
+
+<!-- coverage -->
+<section>
+  <div class="sec-head"><span class="num">24 · Challenge checklist</span><h2>Every challenge requirement, mapped</h2>
+  <p>Each line of the official challenge text, where it lives in our game, and whether it is already built in the prototype, planned for the new build, or a gap we still need to add.</p></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Challenge asks for</th><th>Where it is in Mission Island</th><th>Status</th></tr></thead><tbody><tr><td>Define the mission objective and requirements</td><td>Mission Control briefing; 4 missions + sandbox, each with a science goal, budget and lifetime</td><td><span class="st ok">Built in prototype</span></td></tr><tr><td>Design spacecraft and payload (structure, power, batteries, comms, computer, attitude, instruments)</td><td>Assembly Hangar (7 subsystems) + Science Lab (10 instruments with mass, power, cost, data, value)</td><td><span class="st ok">Built in prototype</span></td></tr><tr><td>Launch vehicle and orbit, explained simply; mass vs rocket vs orbit check</td><td>Launch Complex: 6 orbits with plain explanations and real physics; 4 rockets; capacity check blocks launch</td><td><span class="st ok">Built in prototype</span></td></tr><tr><td>Resources: mass, power, budget, data, comms, time</td><td>Always-visible resource bar with a one-line "why" when something turns red</td><td><span class="st ok">Built in prototype</span></td></tr><tr><td>Time includes development as well as operations</td><td>Add a development schedule: advanced parts add months; miss the launch window and pay more</td><td><span class="st gap">Gap: add</span></td></tr><tr><td>Highlight which resources are critical per scenario</td><td>Each mission marks its critical resources (see Missions above) and the bar emphasises them</td><td><span class="st plan">Planned in new build</span></td></tr><tr><td>Simulate the mission and evaluate it</td><td>Day-by-day flight, Shadowline surface phase, score out of 1000 and a grade</td><td><span class="st ok">Built in prototype</span></td></tr><tr><td>Clear user interface</td><td>Game-style station menus, plain-word resource panel, bottom quest guide</td><td><span class="st ok">Built in prototype</span></td></tr><tr><td>Single player and team of up to 4, distinct roles, shared decisions, negotiation</td><td>Hot-seat crew: 4 roles with competing goals, station ownership, everyone signs off before launch</td><td><span class="st ok">Built in prototype</span></td></tr><tr><td>Final result depends on team coordination</td><td>Role goals count towards the score; AI events are routed to the right role</td><td><span class="st ok">Built in prototype</span></td></tr><tr><td>Modify the design and rerun</td><td>Redesign or "Fly again" from the report; same design can be flown with new seeds</td><td><span class="st ok">Built in prototype</span></td></tr><tr><td>Difficulty levels; simple vs advanced components</td><td>3 difficulty levels exist; add: Cadet hides advanced parts and shows forecasts</td><td><span class="st gap">Gap: add</span></td></tr><tr><td>No single perfect solution</td><td>Balance tests check that several different designs win each mission</td><td><span class="st plan">Planned in new build</span></td></tr><tr><td>Random events and unexpected constraints</td><td>7 event types with choices; AI Mission Director picks and narrates them</td><td><span class="st ok">Built in prototype</span></td></tr><tr><td>Interactive spacecraft visualisation</td><td>Live 3D spacecraft model that changes with every part</td><td><span class="st ok">Built in prototype</span></td></tr><tr><td>Real-time mission dashboard</td><td>Flight telemetry strip and Shadowline battery and signal readouts</td><td><span class="st ok">Built in prototype</span></td></tr><tr><td>Leaderboard / ranking</td><td>Per-mission leaderboard; only server-verified runs rank</td><td><span class="st ok">Built in prototype</span></td></tr><tr><td>Final report and post-mission analysis</td><td>"Why it went this way" analysis, AI debrief, comparison with real NASA missions</td><td><span class="st ok">Built in prototype</span></td></tr><tr><td>Save, share and compare designs</td><td>Share links exist; add saved designs and a side-by-side compare view</td><td><span class="st plan">Planned in new build</span></td></tr><tr><td>Competitive mode between teams on the same objective</td><td>Add "Class challenge": a teacher code gives every team the same mission and seed, with a class leaderboard</td><td><span class="st gap">Gap: add</span></td></tr><tr><td>Sandbox mode</td><td>Sandbox mission with a huge budget</td><td><span class="st ok">Built in prototype</span></td></tr><tr><td>Simple explanations, short tutorials, the "why"</td><td>Explanations on every card, physics panel, Ask CAPCOM; add a 60-second first-run tutorial</td><td><span class="st plan">Planned in new build</span></td></tr></tbody></table></div>
+  <p class="caption">Online real-time co-op is not planned; the team chose hot-seat play (one screen, players take turns), which still covers roles, negotiation and shared decisions.</p>
+</section>
+<!-- 12 stack -->
+<section>
+  <div class="sec-head"><span class="num">25 · Stack and services</span><h2>What we use and why</h2></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Need</th><th>Choice</th><th>Why</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Web app</td><td>Next.js (App Router) + TypeScript</td><td>Best fit for Vercel; pages and API in one project</td><td><span class="st ok">Built</span></td></tr>
+      <tr><td>3D</td><td>React Three Fiber, drei, postprocessing</td><td>Three.js with React components; bloom and tone mapping built in</td><td><span class="st simp">Plain Three.js</span></td></tr>
+      <tr><td>Walking, collisions</td><td>@react-three/rapier</td><td>Real physics for the astronaut and buildings</td><td><span class="st simp">Simple collision</span></td></tr>
+      <tr><td>UI</td><td>Tailwind, shadcn/ui, Framer Motion</td><td>Fast, consistent, accessible components</td><td><span class="st simp">Hand-written CSS</span></td></tr>
+      <tr><td>State</td><td>Zustand</td><td>Small, simple, works inside and outside React</td><td><span class="st simp">main.js</span></td></tr>
+      <tr><td>Engine</td><td><code>@mi/sim</code> (pure TypeScript) in a Web Worker</td><td>Testable, deterministic, same code on server</td><td><span class="st simp">JS, main thread</span></td></tr>
+      <tr><td>AI</td><td><code>@anthropic-ai/sdk</code>, <code>claude-opus-5-5</code>, Zod tools, streaming, prompt caching</td><td>Tool use keeps answers grounded in our numbers</td><td><span class="st simp">CAPCOM only</span></td></tr>
+      <tr><td>Database</td><td>Neon Postgres + Drizzle (Vercel Marketplace)</td><td>Serverless Postgres, env vars set up for us</td><td><span class="st no">Not yet</span></td></tr>
+      <tr><td>Rate limits, cache</td><td>Upstash Redis (Vercel Marketplace)</td><td>Controls AI cost per player</td><td><span class="st simp">In memory</span></td></tr>
+      <tr><td>Big files</td><td>Vercel Blob</td><td>Terrain tiles, 3D models, audio on a CDN</td><td><span class="st no">Not yet</span></td></tr>
+      <tr><td>Tests</td><td>Vitest, Playwright, AI evals (<code>claude-haiku-5-5</code> as judge)</td><td>Engine, full game flow, and AI answer quality</td><td><span class="st no">Not yet</span></td></tr>
+      <tr><td>Monitoring</td><td>Vercel Analytics, Speed Insights, Sentry</td><td>Errors, frame-rate problems, AI cost</td><td><span class="st no">Not yet</span></td></tr>
+    </tbody>
+  </table></div>
+  <p class="caption">AI switch: the <code>AI_MODE</code> env var is <code>live</code>, <code>mock</code> (recorded answers, for tests and the demo video) or <code>off</code>.</p>
+</section>
+
+<!-- 13 glossary -->
+<section>
+  <div class="sec-head"><span class="num">26 · Glossary</span><h2>Words you will hear</h2></div>
+  <dl class="gloss">
+    <div><dt>CAPCOM</dt><dd>The "capsule communicator": the one person in mission control who talks to the crew. Our AI's character.</dd></div>
+    <div><dt>CML</dt><dd>Concept Maturity Level, NASA/JPL's 1–4 ladder from idea to point design. Our quest steps follow it.</dd></div>
+    <div><dt>Δv (delta-v)</dt><dd>How much the engine can change the spacecraft's speed, in m/s. Needed to enter orbit around the Moon or Mars.</dd></div>
+    <div><dt>LEO, SSO, GEO, L1</dt><dd>Orbit types: low Earth, sun-synchronous, geostationary, and the Sun–Earth balance point.</dd></div>
+    <div><dt>Downlink</dt><dd>How much data per day the spacecraft can send home. Data that does not fit is lost.</dd></div>
+    <div><dt>DEM</dt><dd>Digital elevation model: a grid of terrain heights. We use one from NASA Moon Trek.</dd></div>
+    <div><dt>Horizon map</dt><dd>For each spot on the terrain, how high the land rises in each direction. Tells us if the Sun or Earth is visible.</dd></div>
+    <div><dt>Deterministic</dt><dd>Same design + same seed always gives the same result. Lets us test and verify scores.</dd></div>
+    <div><dt>Tool call</dt><dd>When Claude asks our code to run something (like <code>what_if</code>) and uses the result in its answer.</dd></div>
+    <div><dt>Fallback</dt><dd>Scripted text or logic used when the AI is slow, down, or over its limit.</dd></div>
+    <div><dt>R3F</dt><dd>React Three Fiber: writing Three.js 3D scenes as React components.</dd></div>
+    <div><dt>Web Worker</dt><dd>A background thread in the browser, so heavy math does not freeze the 3D view.</dd></div>
+  </dl>
+</section>
+
+<footer>Mission Island build map · NASA Space Apps 2026 · Full detail lives in <code>ARCHITECTURE.md</code> in the repo.</footer>
+</div>

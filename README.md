@@ -217,6 +217,12 @@ flowchart TB
 | Change the island or buildings | `client/world.js` |
 | Change what CAPCOM says or can do | `server/capcom.ts` |
 
+**More documentation** in [`docs/`](docs/):
+
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): the full target architecture (AI features, database, Moon Trek pipeline, testing).
+- [`docs/build-map.html`](docs/build-map.html): the team build map, with diagrams, screen mock-ups, game rules and what is built versus planned. Open it in a browser; an online copy is at [claude.ai/artifact/XsLoBsXiyQwNYLtZpVdddU](https://claude.ai/artifact/XsLoBsXiyQwNYLtZpVdddU).
+- [`docs/screenshots/`](docs/screenshots/): screenshots of the game.
+
 ## Running Locally
 
 Requires Node.js 20 or later. From `mission-island-web/`, install dependencies with `npm install` and start the game with `npm run dev`. To enable AI answers in Ask CAPCOM, copy `.env.example` to `.env.local` and add an Anthropic API key.
