@@ -1,0 +1,10 @@
+# macOS and local tool settings
+.DS_Store
+.claude/
+
+# dependencies and builds (also ignored inside mission-island-web)
+node_modules/
+.next/
+.vercel/
+.env*
+!.env.example

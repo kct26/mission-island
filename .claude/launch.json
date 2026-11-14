@@ -1,6 +1,0 @@
-{
-  "version": "0.0.1",
-  "configurations": [
-    { "name": "mission-island-demo", "runtimeExecutable": "npm", "runtimeArgs": ["--prefix", "/Users/kyledang/Demo/mission-island-web", "run", "dev", "--", "-p", "3020"], "port": 3020 }
-  ]
-}
