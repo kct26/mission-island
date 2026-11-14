@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mission Island</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+  </script>
+</head>
+<body>
+  <canvas id="gl"></canvas>
+
+  <!-- World HUD -->
+  <div id="hud" class="hidden">
+    <div id="resources" class="card"></div>
+    <div id="quest" class="card"></div>
+    <div id="topbar">
+      <div id="players"></div>
+    </div>
+    <canvas id="minimap" width="190" height="190"></canvas>
+    <div id="prompt" class="hidden"></div>
+    <div id="help" class="card small">
+      <b>WASD</b> move · <b>Shift</b> run · <b>Space</b> jump · <b>Drag</b> look · <b>Wheel</b> zoom · <b>E</b> enter station · <b>Tab</b> next player
+    </div>
+  </div>
+
+  <div id="panel" class="hidden"></div>
+  <div id="toast"></div>
+
+  <!-- Simulation overlay -->
+  <div id="simui" class="hidden">
+    <div id="simtop" class="card"></div>
+    <div id="simleft" class="card"></div>
+    <div id="simright" class="card"><h3>Mission Log</h3><div id="simlog"></div></div>
+    <div id="simbottom" class="card">
+      <canvas id="simchart" width="560" height="120"></canvas>
+      <div id="simctl"></div>
+    </div>
+  </div>
+
+  <div id="modal" class="hidden"></div>
+  <div id="screen"></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

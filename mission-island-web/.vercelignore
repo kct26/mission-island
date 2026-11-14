@@ -1,0 +1,6 @@
+.env*
+!.env.example
+.claude
+scripts
+.next
+node_modules
