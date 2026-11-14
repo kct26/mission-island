@@ -4,6 +4,10 @@
 
 Design a space mission on an island spaceport, launch it, fly it day by day, and find out whether your choices were good enough. On the Moon, send a rover into a crater that has not seen sunlight for billions of years.
 
+**▶ Play it in your browser: [mission-island.vercel.app](https://mission-island.vercel.app)** · Demo video: *coming soon*
+
+<p align="center"><img src="docs/screenshots/02-island.png" alt="The island spaceport, with the resource panel and the quest guide" width="100%"></p>
+
 > Mission Island is an independent student project created for the *Space Mission Design Game* challenge of the NASA Space Apps Challenge 2026. It is not a NASA product and is not endorsed by NASA.
 
 ---
@@ -31,6 +35,27 @@ The player starts with a science objective, not a ready-made spacecraft. Every d
 6. **Debrief.** A grade, a plain-language explanation of what went well and what to fix, and a side-by-side comparison with the closest real NASA mission.
 
 A full run takes about ten minutes, and the report always leads back to the island to improve the design.
+
+## Visual Tour
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/01-menu.png" alt="Mission select"><br><sub>Choose one of five missions</sub></td>
+    <td><img src="docs/screenshots/03-hangar.png" alt="Assembly Hangar loadout menu"><br><sub>Pick parts; every choice previews its effect</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/04-review.png" alt="Design review"><br><sub>The design review blocks impossible launches, with Fix buttons</sub></td>
+    <td><img src="docs/screenshots/05-launch.png" alt="Launch"><br><sub>Launch</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/06-event.png" alt="In-flight event"><br><sub>In-flight events explain the risk for your spacecraft</sub></td>
+    <td><img src="docs/screenshots/07-shadowline-plan.png" alt="Shadowline route planning"><br><sub>Shadowline: plan a route into the dark crater (ice in cyan)</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/08-shadowline-drive.png" alt="Rover driving in shadow"><br><sub>In the dark: no sunlight, no signal, battery draining</sub></td>
+    <td><img src="docs/screenshots/10-report.png" alt="Mission report"><br><sub>The debrief: grade, reasons, and what to fix</sub></td>
+  </tr>
+</table>
 
 ## Missions
 
@@ -95,49 +120,133 @@ CAPCOM is the mission controller players can ask at any time ("Why is my data ba
 
 Values are simplified for gameplay. The Shadowline terrain is currently a procedural crater modelled on south-pole conditions; real NASA Moon Trek elevation data can be loaded in its place.
 
-## How It Is Built
+## Tech Stack
 
-Mission Island is a web game. It runs in any modern browser with nothing to install.
+| Layer | Technology | What it does in Mission Island |
+|---|---|---|
+| Web framework | **Next.js 16** (App Router) with **React 19** | Serves the page, bundles the code, and runs the one server route |
+| 3D graphics | **Three.js 0.160** | The island, launch, orbit views and the Shadowline crater; sky, reflections and glow (bloom) |
+| Game engine | **Plain JavaScript modules** | Every rule and number: parts, orbits, physics, design review, science, flight, events, rover, scoring |
+| Server code | **TypeScript** + **Zod** | The Ask CAPCOM route; Zod checks every request before it reaches the engine |
+| AI (optional) | **Anthropic SDK** + **Claude** | Natural-language CAPCOM answers; Claude calls the engine through tools for every number |
+| Styling | Hand-written **CSS** | Green, yellow and off-white theme, game-style menus, HUD and report |
+| Saved data | Browser **localStorage** | Per-browser leaderboard. No database and no accounts |
+| Hosting | **Vercel** | Free hosting with a global CDN, one serverless function, automatic deploys |
+| Code | **GitHub** | Source of truth; every push to `master` redeploys the live site |
+
+## Infrastructure
 
 ```mermaid
-flowchart TD
-    P[Player] --> UI[Screens: menus, HUD, chat, report]
-    UI --> GS[(Game state)]
-    GS --> SIM[Simulation engine]
-    SIM --> GS
-    GS --> R3D[3D scenes: island, launch, orbit, crater]
-    UI --> API["Ask CAPCOM route"]
-    API --> SIM2[Same simulation engine, server side]
-    API --> AI[Claude, optional]
+flowchart LR
+    DEV[Team member] -- git push --> GH[GitHub repo]
+    GH -- automatic deploy --> V[Vercel]
+    V --> CDN[CDN: page and game code]
+    V --> FN["Serverless function: Ask CAPCOM"]
+    CDN --> BR[Player's browser]
+    BR -- "question + current design" --> FN
+    FN -. optional .-> CL[Claude API]
 ```
 
-- **The simulation is the source of truth.** One plain JavaScript engine calculates every number and outcome. The 3D scenes and the AI only show and explain what it computed.
-- **3D** is built with Three.js: a golden-hour island with physically based sky and reflections, a launch sequence, orbit views with procedural planets, and the Shadowline crater lit directly from the engine's sunlight calculation.
-- **Stack:** Next.js, Three.js, and the Anthropic SDK for the optional AI features.
+- **Almost everything runs in the player's browser.** The page, the 3D, the engine and the leaderboard need no server at all, so the game is fast and cheap to host.
+- **One small server function** answers Ask CAPCOM. It checks the request, limits how often one player can ask, runs the engine on the server, and, only if an AI key is set, asks Claude to phrase the answer. Without a key it answers from the engine alone, so the game never depends on the AI.
+- **Settings live in Vercel → Environment Variables:** `ANTHROPIC_API_KEY` (optional) and `AI_MODE` (`live` or `off`).
 
-## Project Structure
+## Architecture
 
-| Path | Purpose |
+The game has three layers. The rule that holds it together: **the simulation engine decides every number; the screens and the AI only show and explain it.**
+
+```mermaid
+flowchart TB
+    subgraph Browser
+        PAGE[Next.js page] --> MAIN["Game controller (main.js)"]
+        MAIN --> UI[Menus, HUD, chat, report]
+        MAIN --> R3D["3D scenes: island, orbit, crater"]
+        MAIN --> ENG["Simulation engine (sim/)"]
+        MAIN --> LS[(localStorage)]
+    end
+    subgraph Server
+        API["Ask CAPCOM route"] --> ENG2["Same engine (sim/)"]
+        API -. optional .-> AI[Claude]
+    end
+    UI --> API
+```
+
+**What happens when a player makes a choice**
+
+1. The player clicks *Equip* on a part in a station menu.
+2. The game controller updates the design.
+3. The engine recalculates mass, power, money, data, science and the design review, instantly and in the browser.
+4. The resource panel, the guide and the 3D spacecraft on the hangar stand update.
+5. If the player asks CAPCOM for help, the design goes to the server route, which tests changes in the same engine and sends back answers with *Apply* buttons.
+
+**The simulation engine** (`mission-island-web/src/game/sim/`), pure JavaScript with no graphics:
+
+| File | Responsibility |
 |---|---|
-| `mission-island-web/src/game/sim/` | Simulation engine: parts, orbits, rockets, design review, science, flight, events, Shadowline, scoring, NASA references |
-| `mission-island-web/src/game/client/` | 3D scenes, menus, HUD, report, CAPCOM chat, illustrations |
-| `mission-island-web/src/game/server/` | Ask CAPCOM: tools that call the simulator, AI and offline answers |
-| `mission-island-web/src/app/` | Next.js page and the `/api/capcom` route |
-| `mission-island/` | The first prototype and the original architecture notes |
+| `data.js` | All game content: missions, orbits, rockets, parts, instruments, roles, difficulty |
+| `physics.js` | Orbit periods, speeds and shadow time from real planetary constants |
+| `model.js` | Turns a design into mass, power, data, cost, science and the design-review checks; writes the debrief reasons |
+| `sim.js` | Flies the mission day by day and scores it |
+| `events.js` | The seven in-flight events, their personalised explanations and recommendations |
+| `surface.js` | Shadowline: terrain, sunlight and Earth visibility, rover simulation |
+| `nasa.js` | The real-mission archive, real-world cases and NASA frameworks |
+
+**The game client** (`mission-island-web/src/game/client/`), what the player sees:
+
+| File | Responsibility |
+|---|---|
+| `main.js` | Game controller: menus, station loadouts, HUD, guide, flight screen, events, report, CAPCOM chat, main loop |
+| `world.js` | The 3D island, buildings, astronaut, camera, launch sequence |
+| `space.js` | The orbit view during flight |
+| `shadowline.js` | The 3D crater, route planning and rover playback |
+| `models.js`, `illus.js` | 3D models (spacecraft, rockets, planets) and the menu illustrations |
+| `game.css` | All styling and the colour theme |
+
+**The server** (`mission-island-web/src/game/server/capcom.ts` and `src/app/api/capcom/route.ts`): request checks, rate limit, the five CAPCOM tools, the Claude call and the offline fallback.
+
+**Where to change things**
+
+| I want to… | Edit |
+|---|---|
+| Change a part's mass, power or price, or add an instrument | `sim/data.js` |
+| Change how science or the design review works | `sim/model.js` |
+| Add or change an in-flight event | `sim/events.js` |
+| Change the rover phase rules | `sim/surface.js` |
+| Change a menu, the HUD or the report | `client/main.js` |
+| Change colours or layout | `client/game.css` (theme colours are at the top of the theme section) |
+| Change the island or buildings | `client/world.js` |
+| Change what CAPCOM says or can do | `server/capcom.ts` |
 
 ## Running Locally
 
-Requires Node.js 20 or later. From `mission-island-web/`, install dependencies with `npm install` and start it with `npm run dev`. To enable AI answers in Ask CAPCOM, copy `.env.example` to `.env.local` and add an Anthropic API key.
+Requires Node.js 20 or later. From `mission-island-web/`, install dependencies with `npm install` and start the game with `npm run dev`. To enable AI answers in Ask CAPCOM, copy `.env.example` to `.env.local` and add an Anthropic API key.
+
+## NASA Data and Resources Used
+
+- **NASA's four mission segments** (launch, space, ground, user) organise the island's buildings and the debrief.
+- **JPL Concept Maturity Levels** (CML 1–4) are the design-progress ladder at Mission Control.
+- **Real mission facts** from NASA mission pages and histories: Landsat 8, Terra, Suomi NPP, ECOSTRESS, NISAR, SOHO, ACE, DSCOVR, SDO, LRO, Lunar Prospector, MRO, Mars Odyssey, MAVEN, Mars Climate Orbiter and PACE.
+- **VIPER's operations concept** (blocked radio, long blackouts, sunlit safe havens) shapes Shadowline.
+- **NASA Moon Trek** lunar elevation data is the planned replacement for the procedural crater.
+
+## Use of AI
+
+- **In the game:** Ask CAPCOM can use Claude (Anthropic) to answer players in plain language. Claude never decides outcomes; every number it uses comes from the game's own simulator, and the game works fully without it.
+- **In development:** the team used Claude as a coding and design assistant.
 
 ## Status
 
 **Playable now:** all five missions, island design with the full design review, launch, day-by-day flight with in-flight events, the Shadowline rover phase, scoring and debrief, Ask CAPCOM (offline, with optional AI), hot-seat team play, and per-browser leaderboards and share links.
 
-**Planned:** real NASA Moon Trek terrain for Shadowline, an AI design review board and mission debrief, development time as a resource, simpler parts on lower difficulty, and a class competition mode.
+**Next:** real NASA Moon Trek terrain for Shadowline; touch controls for phones and tablets; development time as a resource; simpler parts on lower difficulty; a class competition mode where teams fly the same mission; an AI design review board and mission debrief; automated tests; a student playtest with a before-and-after quiz.
 
 ## Team
 
 *Add team member names here.*
+
+## License
+
+Code is released under the [MIT License](LICENSE).
 
 ## Credits
 
