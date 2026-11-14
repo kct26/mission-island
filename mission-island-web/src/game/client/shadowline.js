@@ -188,6 +188,8 @@ export class Shadowline {
     this.result = S.simulateRoute(this.terrain, this.design, this.plan);
     this.phase = 'play'; this.playT = 0; this.logShown = 0; this.paused = false;
     this.rover.visible = true; this.colorize(0);
+    // During the drive keep only the route line; the tall planning markers would hide the rover.
+    for (const o of this.planGroup.children) if (o.isMesh) o.visible = false;
     this.renderPlay();
   }
 
