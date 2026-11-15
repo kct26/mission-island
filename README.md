@@ -227,10 +227,50 @@ flowchart TB
 
 Requires Node.js 20 or later. From `mission-island-web/`, install dependencies with `npm install` and start the game with `npm run dev`. To enable AI answers in Ask CAPCOM, copy `.env.example` to `.env.local` and add an Anthropic API key.
 
-## NASA Data and Resources Used
+## How Mission Island Answers the Challenge
 
-- **NASA's four mission segments** (launch, space, ground, user) organise the island's buildings and the debrief.
-- **JPL Concept Maturity Levels** (CML 1–4) are the design-progress ladder at Mission Control.
+The challenge asks for a game where players design, manage and simulate a complete space mission. This is how each part of the brief is covered.
+
+| The challenge asks for | Mission Island |
+|---|---|
+| Start from a mission objective | Every run starts at Mission Control with a science goal, a budget and a required lifetime, before any part is chosen |
+| Design the spacecraft | Assembly Hangar: structure, solar or nuclear power, battery, flight computer, pointing system, engine, and a rover on the Moon mission |
+| Select scientific instruments | Science Lab: 10 instruments, each with its own mass, power, cost, data rate and science value |
+| Choose a launch vehicle and orbit | Launch Complex: 6 orbits and 4 rockets with real-style payload limits per destination |
+| Check mass and orbit against the rocket | The design review blocks launch if the rocket cannot lift the spacecraft to the chosen orbit |
+| Manage budget, mass, power, communications, data and lifetime | Six resources shown in plain words on screen the whole time, each with a green / yellow / red state |
+| Show how one decision affects the rest | Every option card shows its effect on weight, power, money and data before you pick it |
+| No single perfect solution | Many designs pass each mission; the debrief compares yours with the real NASA missions that took different routes |
+| Mission simulation and evaluation | Launch with real reliability, day-by-day flight, ageing panels, radiation, data backlog, then a score out of 1,000 |
+| Random events and unexpected constraints | 7 in-flight events (solar storm, budget cut, space junk and more), each tied to a real NASA case |
+| Up to four players with different roles | Hot-seat team play: Mission Lead, Spacecraft Engineer, Science Lead, Comms & Ops, each with its own goal and a sign-off before launch |
+| Feedback that explains *why* | Each design problem is explained with a *Fix* button; the debrief says what went well, what to fix and gives one tip |
+| Difficulty levels and mission types | 3 difficulty levels (Cadet, Engineer, Flight Director) and 5 missions from Easy to Hard, plus a Sandbox |
+| Fly again and improve | Every report leads back to the island with the design kept |
+| Leaderboards, saving and sharing | A leaderboard per mission, and a link that shares your full design |
+| Interactive visualisation | A 3D island, launch, orbit view and the Shadowline crater on the Moon |
+| Accessible to beginners | Plain-word labels, a bottom-centre quest guide, illustrations on every option, and Ask CAPCOM for questions |
+
+Not covered yet: development time as a resource (only mission lifetime is modelled), simpler parts on lower difficulty, and a competitive mode where several teams fly the same mission. These are on the roadmap below.
+
+## Challenge Resources: How We Used Them
+
+The challenge's [Resources tab](https://www.spaceappschallenge.org/2026/challenges/space-mission-design-game/?tab=resources) lists NASA and partner material. Here is what we took from each one, and where we have not used it yet.
+
+| Resource | How Mission Island uses it | Status |
+|---|---|---|
+| **Design and Develop Science Missions** (NASA) | The four mission segments shape the island: the Launch Complex is the launch segment, the Hangar and Science Lab the space segment, the Ground Station the ground segment, and the debrief the user segment (what scientists get back) | Used |
+| **Concept Maturity Levels** (JPL) | CML 1–4 is the progress ladder at Mission Control: idea, feasible concept, trade study, point design. The design review must pass before launch | Used |
+| **Mission Design Lab** (NASA Goddard) | The design review checks the same disciplines the MDL studies (power, propulsion, communications, attitude control, mass, cost, risk), and the option cards are small trade studies. An AI review board in the MDL style is planned | Partly used |
+| **A Learning Game About Telescopes** | We follow its pattern: objective first, choices limited by what fits the objective, an animated launch, results from your design, and real NASA missions with similar goals | Used |
+| **General Mission Analysis Tool (GMAT)** | Not run inside the game. Orbit periods, speeds and eclipse times use the same physics GMAT starts from (real gravitational constants and radii), simplified to first order so the game runs in a browser | Simplified |
+| **NASA Mission Viz** | Not used directly. Our launch and orbit view is our own Three.js scene; Mission Viz is a reference for a future, more accurate trajectory view | Not yet |
+| **CubeSat 101** (NASA CSLI) | The smallest spacecraft bus is a small-satellite option, but we have not yet modelled CubeSat sizes or the CubeSat process | Not yet |
+| **Visualize a Space Mission Using VR** (2023 challenge) | Its idea of showing the concept, trajectory, timeline and 3D view of a mission matches our launch, flight timeline and 3D scenes; we did not build VR | Inspired |
+| **CSA Digital Games and Activities** | Looked at as examples of short, friendly space games for young players | Inspired |
+
+## Other NASA Data Used
+
 - **Real mission facts** from NASA mission pages and histories: Landsat 8, Terra, Suomi NPP, ECOSTRESS, NISAR, SOHO, ACE, DSCOVR, SDO, LRO, Lunar Prospector, MRO, Mars Odyssey, MAVEN, Mars Climate Orbiter and PACE.
 - **VIPER's operations concept** (blocked radio, long blackouts, sunlit safe havens) shapes Shadowline.
 - **NASA Moon Trek** lunar elevation data is the planned replacement for the procedural crater.
