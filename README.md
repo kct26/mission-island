@@ -288,7 +288,9 @@ The challenge's [Resources tab](https://www.spaceappschallenge.org/2026/challeng
 
 ## Team
 
-*Add team member names here.*
+**Lazy Dragon**
+
+- **Kyle Dang** ([@kct26](https://github.com/kct26)): game design, development, and documentation
 
 ## License
 
