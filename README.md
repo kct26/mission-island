@@ -4,7 +4,7 @@
 
 Design a space mission on an island spaceport, launch it, fly it day by day, and find out whether your choices were good enough. On the Moon, send a rover into a crater that has not seen sunlight for billions of years.
 
-**▶ Play it in your browser: [mission-island.vercel.app](https://mission-island.vercel.app)** · Demo video: *coming soon*
+**▶ Play it in your browser: [mission-island.vercel.app](https://mission-island.vercel.app)** · **🎬 [Watch the 30-second demo](https://drive.google.com/file/d/16zAy-uoQIkpvl1beO_LV0IZZUnY9hVde/view?usp=sharing)** ([MP4 in this repo](docs/demo/mission-island-demo.mp4))
 
 <p align="center"><img src="docs/screenshots/02-island.png" alt="The island spaceport, with the resource panel and the quest guide" width="100%"></p>
 
